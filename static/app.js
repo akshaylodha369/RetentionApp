@@ -1,666 +1,1453 @@
+from fastapi import FastAPI, HTTPException, Form, Response, Cookie
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-// static/app.js
+import requests
+import hashlib
+import secrets
+import math
 
-// =========================================================
-// STATE
-// =========================================================
+from database import (
+    init_db,
+    get_businesses,
+    add_businesses,
+    is_following,
+    get_followed_businesses,
+    get_connection,
+    get_user_by_email,
+    get_user_by_id,
+    get_owner_businesses,
+    get_business_by_id,
+    assign_business_to_owner,
+    update_business_offer
+)
 
-let allBusinesses = [];
-
-let currentTab = "nearby";
-let currentCategory = "all";
-let searchText = "";
-
-
-// =========================================================
-// ELEMENTS
-// =========================================================
-
-const searchInput = document.getElementById("searchInput");
-const businessList = document.getElementById("businessList");
-const sectionTitle = document.getElementById("sectionTitle");
-
-const nearbyTab = document.getElementById("nearbyTab");
-const followingTab = document.getElementById("followingTab");
-const offersTab = document.getElementById("offersTab");
-
-const filterButtons = document.querySelectorAll(
-    ".filter-btn"
-);
-
-const homeNav = document.getElementById("homeNav");
-const profileNav = document.getElementById("profileNav");
+from config import GOOGLE_PLACES_API_KEY
 
 
-// =========================================================
-// LOAD BUSINESSES
-// =========================================================
+# =========================================================
+# APP
+# =========================================================
 
-async function loadBusinesses() {
+app = FastAPI()
 
-    try {
 
-        const response = await fetch(
-            "/api/businesses"
-        );
+# =========================================================
+# STATIC FILES
+# =========================================================
 
-        if (!response.ok) {
-            throw new Error("Failed to load businesses");
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static"
+)
+
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+init_db()
+
+
+# =========================================================
+# PASSWORD HASHING
+# =========================================================
+
+def hash_password(password: str):
+
+    salt = secrets.token_hex(16)
+
+    password_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        salt.encode(),
+        100000
+    ).hex()
+
+    return f"{salt}:{password_hash}"
+
+
+def verify_password(
+    password: str,
+    stored_password: str
+):
+
+    try:
+
+        salt, stored_hash = stored_password.split(
+            ":",
+            1
+        )
+
+        password_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode(),
+            salt.encode(),
+            100000
+        ).hex()
+
+        return secrets.compare_digest(
+            password_hash,
+            stored_hash
+        )
+
+    except (ValueError, AttributeError):
+
+        return False
+
+
+# =========================================================
+# HOME
+# =========================================================
+
+@app.get("/")
+def home():
+
+    return FileResponse(
+        "static/index.html"
+    )
+
+
+# =========================================================
+# SIGNUP
+# =========================================================
+
+@app.post("/api/signup")
+def signup(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    name = name.strip()
+    email = email.strip().lower()
+
+    if not name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Name is required"
+        )
+
+    if not email:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email is required"
+        )
+
+    if len(password) < 6:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters"
+        )
+
+    if get_user_by_email(email):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    password_hash = hash_password(password)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO users
+            (
+                name,
+                email,
+                password_hash,
+                role
+            )
+            VALUES (?, ?, ?, 'customer')
+            """,
+            (
+                name,
+                email,
+                password_hash
+            )
+        )
+
+        user_id = cursor.lastrowid
+
+        conn.commit()
+
+    except Exception as error:
+
+        conn.rollback()
+        conn.close()
+
+        print("Signup error:", error)
+
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to create account"
+        )
+
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Account created",
+        "user_id": user_id
+    }
+
+
+# =========================================================
+# CUSTOMER LOGIN
+# =========================================================
+
+@app.post("/api/login")
+def login(
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    email = email.strip().lower()
+
+    user = get_user_by_email(email)
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    user_id = user[0]
+    name = user[1]
+    user_email = user[2]
+    stored_password = user[3]
+
+    if not verify_password(
+        password,
+        stored_password
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    response.set_cookie(
+        key="user_id",
+        value=str(user_id),
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+
+    return {
+        "success": True,
+        "message": "Login successful",
+        "user": {
+            "id": user_id,
+            "name": name,
+            "email": user_email,
+            "role": user[4]
+        }
+    }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
+
+@app.get("/api/me")
+def current_user(
+    user_id: str | None = Cookie(default=None)
+):
+
+    if not user_id:
+
+        return {
+            "logged_in": False
         }
 
-        allBusinesses = await response.json();
+    try:
 
-        renderBusinesses();
+        user_id_int = int(user_id)
 
-    } catch (error) {
+    except ValueError:
 
-        console.error(error);
+        return {
+            "logged_in": False
+        }
 
-        businessList.innerHTML = `
-            <p>
-                ❌ Unable to load businesses.
-            </p>
-        `;
-    }
-}
+    user = get_user_by_id(user_id_int)
 
+    if not user:
 
-// =========================================================
-// FILTER BUSINESSES
-// =========================================================
+        return {
+            "logged_in": False
+        }
 
-function getFilteredBusinesses() {
-
-    let businesses = [...allBusinesses];
-
-
-    // CATEGORY FILTER
-
-    if (currentCategory !== "all") {
-
-        businesses = businesses.filter(
-            business =>
-                String(business.category || "")
-                    .toLowerCase()
-                    .includes(
-                        currentCategory.toLowerCase()
-                    )
-        );
+    return {
+        "logged_in": True,
+        "user": {
+            "id": user[0],
+            "name": user[1],
+            "email": user[2],
+            "role": user[3]
+        }
     }
 
 
-    // SEARCH FILTER
+# =========================================================
+# LOGOUT
+# =========================================================
 
-    if (searchText.trim()) {
+@app.post("/api/logout")
+def logout(response: Response):
 
-        const query = searchText
-            .trim()
-            .toLowerCase();
+    response.delete_cookie(
+        key="user_id",
+        path="/"
+    )
 
-        businesses = businesses.filter(
-            business => {
+    response.delete_cookie(
+        key="owner_id",
+        path="/"
+    )
 
-                const name = String(
-                    business.name || ""
-                ).toLowerCase();
+    return {
+        "success": True,
+        "message": "Logged out"
+    }
 
-                const category = String(
-                    business.category || ""
-                ).toLowerCase();
 
-                const address = String(
-                    business.address || ""
-                ).toLowerCase();
+# =========================================================
+# ALL BUSINESSES
+# =========================================================
 
-                return (
-                    name.includes(query) ||
-                    category.includes(query) ||
-                    address.includes(query)
-                );
+@app.get("/api/businesses")
+def businesses():
+
+    data = get_businesses()
+
+    return [
+        {
+            "id": business[0],
+            "name": business[1],
+            "category": business[2],
+            "latitude": business[3],
+            "longitude": business[4],
+            "address": business[5],
+            "offer": business[6],
+            "owner_id": business[7]
+        }
+        for business in data
+    ]
+
+
+# =========================================================
+# DISTANCE CALCULATION
+# =========================================================
+
+def calculate_distance_km(
+    lat1,
+    lng1,
+    lat2,
+    lng2
+):
+
+    if (
+        lat1 is None
+        or lng1 is None
+        or lat2 is None
+        or lng2 is None
+    ):
+        return None
+
+    earth_radius_km = 6371.0
+
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+
+    delta_lat = math.radians(
+        lat2 - lat1
+    )
+
+    delta_lng = math.radians(
+        lng2 - lng1
+    )
+
+    a = (
+        math.sin(delta_lat / 2) ** 2
+        +
+        math.cos(lat1_rad)
+        *
+        math.cos(lat2_rad)
+        *
+        math.sin(delta_lng / 2) ** 2
+    )
+
+    c = 2 * math.atan2(
+        math.sqrt(a),
+        math.sqrt(1 - a)
+    )
+
+    return earth_radius_km * c
+
+
+# =========================================================
+# NEARBY BUSINESSES
+# =========================================================
+
+@app.get("/api/nearby")
+def nearby(
+    lat: float | None = None,
+    lng: float | None = None
+):
+
+    if lat is None or lng is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Location coordinates are required"
+        )
+
+    if not (
+        -90 <= lat <= 90
+        and -180 <= lng <= 180
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid location coordinates"
+        )
+
+
+    # =====================================================
+    # GOOGLE PLACES NEARBY SEARCH
+    # =====================================================
+
+    url = (
+        "https://places.googleapis.com/v1/"
+        "places:searchNearby"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.displayName,"
+            "places.formattedAddress,"
+            "places.location,"
+            "places.types"
+        )
+    }
+
+
+    body = {
+
+        "includedTypes": [
+            "cafe",
+            "restaurant",
+            "coffee_shop",
+            "bakery",
+            "clothing_store",
+            "grocery_store",
+            "beauty_salon",
+            "hair_salon",
+            "pharmacy",
+            "gym",
+            "book_store"
+        ],
+
+        "maxResultCount": 20,
+
+        "rankPreference": "DISTANCE",
+
+        "locationRestriction": {
+
+            "circle": {
+
+                "center": {
+                    "latitude": lat,
+                    "longitude": lng
+                },
+
+                "radius": 5000.0
             }
-        );
+        }
     }
 
 
-    return businesses;
-}
+    try:
+
+        google_response = requests.post(
+            url,
+            headers=headers,
+            json=body,
+            timeout=20
+        )
+
+    except requests.RequestException as error:
+
+        print(
+            "Google Nearby Search error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to contact Google Places"
+        )
 
 
-// =========================================================
-// RENDER BUSINESSES
-// =========================================================
+    if google_response.status_code != 200:
 
-function renderBusinesses() {
+        print(
+            "Google Nearby Search failed:",
+            google_response.status_code,
+            google_response.text
+        )
 
-    let businesses = getFilteredBusinesses();
-
-
-    // TAB FILTERING
-
-    if (currentTab === "following") {
-
-        loadFollowingBusinesses();
-        return;
-    }
+        raise HTTPException(
+            status_code=502,
+            detail="Google Places search failed"
+        )
 
 
-    if (currentTab === "offers") {
+    google_data = google_response.json()
 
-        businesses = businesses.filter(
-            business =>
-                business.offer &&
-                String(business.offer).trim() !== ""
-        );
-    }
+    places = google_data.get(
+        "places",
+        []
+    )
 
 
-    // EMPTY STATE
+    # =====================================================
+    # SAVE GOOGLE BUSINESSES TO DATABASE
+    # =====================================================
 
-    if (!businesses.length) {
-
-        businessList.innerHTML = `
-            <div class="business-card">
-                <div>
-                    <h3>No businesses found</h3>
-                    <p>
-                        Try another search or category.
-                    </p>
-                </div>
-            </div>
-        `;
-
-        return;
-    }
+    businesses_to_save = []
 
 
-    // RENDER
+    for place in places:
 
-    businessList.innerHTML = businesses
-        .map(business => {
+        display_name = place.get(
+            "displayName",
+            {}
+        )
 
-            const icon =
-                getCategoryIcon(
-                    business.category
-                );
-
-            const offerText =
-                business.offer
-                    ? `🎟️ ${escapeHtml(business.offer)}`
-                    : "No active offer";
+        name = display_name.get(
+            "text",
+            "Unknown Business"
+        )
 
 
-            return `
-                <a
-                    href="/static/business.html?id=${business.id}"
-                    class="business-link"
-                >
+        address = place.get(
+            "formattedAddress",
+            ""
+        )
 
-                    <div class="business-card">
 
-                        <div>
+        location = place.get(
+            "location",
+            {}
+        )
 
-                            <h3>
-                                ${icon}
-                                ${escapeHtml(business.name)}
-                            </h3>
 
-                            <p>
-                                ${escapeHtml(
-                                    business.category || ""
-                                )}
-                            </p>
+        business_latitude = location.get(
+            "latitude"
+        )
 
-                            <p>
-                                📍
-                                ${escapeHtml(
-                                    business.address || "Address unavailable"
-                                )}
-                            </p>
+        business_longitude = location.get(
+            "longitude"
+        )
 
-                            <p>
-                                ${offerText}
-                            </p>
 
-                        </div>
+        place_types = place.get(
+            "types",
+            []
+        )
 
-                        <span>
-                            →
-                        </span>
 
-                    </div>
+        category = "business"
 
-                </a>
-            `;
+        if "cafe" in place_types:
+            category = "cafe"
+
+        elif "restaurant" in place_types:
+            category = "restaurant"
+
+        elif "coffee_shop" in place_types:
+            category = "cafe"
+
+        elif "bakery" in place_types:
+            category = "bakery"
+
+        elif (
+            "clothing_store"
+            in place_types
+        ):
+            category = "shop"
+
+        elif (
+            "grocery_store"
+            in place_types
+        ):
+            category = "shop"
+
+        elif (
+            "beauty_salon"
+            in place_types
+        ):
+            category = "salon"
+
+        elif (
+            "hair_salon"
+            in place_types
+        ):
+            category = "salon"
+
+        elif "gym" in place_types:
+            category = "gym"
+
+        elif "book_store" in place_types:
+            category = "shop"
+
+
+        if (
+            business_latitude is None
+            or business_longitude is None
+        ):
+            continue
+
+
+        businesses_to_save.append(
+            (
+                name,
+                category,
+                business_latitude,
+                business_longitude,
+                address,
+                None,
+                None
+            )
+        )
+
+
+    if businesses_to_save:
+
+        add_businesses(
+            businesses_to_save
+        )
+
+
+    # =====================================================
+    # RETURN NEARBY BUSINESSES
+    # =====================================================
+
+    nearby_businesses = []
+
+    for business in businesses_to_save:
+
+        distance = calculate_distance_km(
+            lat,
+            lng,
+            business[2],
+            business[3]
+        )
+
+        nearby_businesses.append({
+
+            "id": None,
+
+            "name": business[0],
+
+            "category": business[1],
+
+            "latitude": business[2],
+
+            "longitude": business[3],
+
+            "address": business[4],
+
+            "offer": business[5],
+
+            "owner_id": business[6],
+
+            "distance_km": (
+                round(distance, 2)
+                if distance is not None
+                else None
+            )
         })
-        .join("");
-}
 
 
-// =========================================================
-// FOLLOWING BUSINESSES
-// =========================================================
+    # =====================================================
+    # GET DATABASE IDS + EXISTING OFFERS
+    # =====================================================
 
-async function loadFollowingBusinesses() {
-
-    sectionTitle.textContent =
-        "Following Businesses";
+    all_database_businesses = get_businesses()
 
 
-    try {
+    for item in nearby_businesses:
 
-        const response = await fetch(
-            "/api/following"
-        );
+        for database_business in all_database_businesses:
 
+            same_name = (
+                database_business[1]
+                == item["name"]
+            )
 
-        if (response.status === 401) {
+            same_address = (
+                database_business[5]
+                == item["address"]
+            )
 
-            businessList.innerHTML = `
-                <div class="business-card">
+            if same_name and same_address:
 
-                    <div>
+                item["id"] = database_business[0]
 
-                        <h3>Login required</h3>
-
-                        <p>
-                            Please login to see
-                            businesses you follow.
-                        </p>
-
-                    </div>
-
-                </div>
-            `;
-
-            return;
-        }
-
-
-        if (!response.ok) {
-            throw new Error(
-                "Failed to load following businesses"
-            );
-        }
-
-
-        let businesses =
-            await response.json();
-
-
-        // SEARCH FILTER
-
-        if (searchText.trim()) {
-
-            const query =
-                searchText
-                    .trim()
-                    .toLowerCase();
-
-            businesses =
-                businesses.filter(
-                    business => {
-
-                        const name =
-                            String(
-                                business.name || ""
-                            ).toLowerCase();
-
-                        const category =
-                            String(
-                                business.category || ""
-                            ).toLowerCase();
-
-                        const address =
-                            String(
-                                business.address || ""
-                            ).toLowerCase();
-
-                        return (
-                            name.includes(query) ||
-                            category.includes(query) ||
-                            address.includes(query)
-                        );
-                    }
-                );
-        }
-
-
-        // CATEGORY FILTER
-
-        if (currentCategory !== "all") {
-
-            businesses =
-                businesses.filter(
-                    business =>
-                        String(
-                            business.category || ""
-                        )
-                        .toLowerCase()
-                        .includes(
-                            currentCategory
-                                .toLowerCase()
-                        )
-                );
-        }
-
-
-        if (!businesses.length) {
-
-            businessList.innerHTML = `
-                <div class="business-card">
-
-                    <div>
-
-                        <h3>No businesses found</h3>
-
-                        <p>
-                            You are not following any
-                            matching businesses.
-                        </p>
-
-                    </div>
-
-                </div>
-            `;
-
-            return;
-        }
-
-
-        businessList.innerHTML =
-            businesses
-                .map(
-                    business => {
-
-                        const icon =
-                            getCategoryIcon(
-                                business.category
-                            );
-
-                        const offerText =
-                            business.offer
-                                ? `🎟️ ${escapeHtml(
-                                    business.offer
-                                )}`
-                                : "No active offer";
-
-
-                        return `
-                            <a
-                                href="/static/business.html?id=${business.id}"
-                                class="business-link"
-                            >
-
-                                <div class="business-card">
-
-                                    <div>
-
-                                        <h3>
-                                            ${icon}
-                                            ${escapeHtml(
-                                                business.name
-                                            )}
-                                        </h3>
-
-                                        <p>
-                                            ${escapeHtml(
-                                                business.category || ""
-                                            )}
-                                        </p>
-
-                                        <p>
-                                            📍
-                                            ${escapeHtml(
-                                                business.address ||
-                                                "Address unavailable"
-                                            )}
-                                        </p>
-
-                                        <p>
-                                            ${offerText}
-                                        </p>
-
-                                    </div>
-
-                                    <span>
-                                        →
-                                    </span>
-
-                                </div>
-
-                            </a>
-                        `;
-                    }
+                item["offer"] = (
+                    database_business[6]
                 )
-                .join("");
+
+                item["owner_id"] = (
+                    database_business[7]
+                )
+
+                break
 
 
-    } catch (error) {
-
-        console.error(error);
-
-        businessList.innerHTML = `
-            <div class="business-card">
-
-                <div>
-
-                    <h3>Unable to load</h3>
-
-                    <p>
-                        Please refresh the page.
-                    </p>
-
-                </div>
-
-            </div>
-        `;
-    }
-}
+    nearby_businesses.sort(
+        key=lambda item:
+            item["distance_km"]
+            if item["distance_km"] is not None
+            else 999999
+    )
 
 
-// =========================================================
-// TAB MANAGEMENT
-// =========================================================
-
-function setActiveTab(tab) {
-
-    nearbyTab.classList.remove("active");
-    followingTab.classList.remove("active");
-    offersTab.classList.remove("active");
+    return nearby_businesses
 
 
-    if (tab === "nearby") {
+# =========================================================
+# LOAD BUSINESSES FROM GOOGLE PLACES
+# =========================================================
 
-        nearbyTab.classList.add("active");
+@app.get("/api/load-businesses")
+def load_businesses():
 
-        sectionTitle.textContent =
-            "Nearby Businesses";
+    url = (
+        "https://places.googleapis.com/v1/"
+        "places:searchText"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.displayName,"
+            "places.formattedAddress,"
+            "places.location"
+        )
     }
 
+    searches = [
+        (
+            "cafe",
+            "cafes near Huzurganj, Madhya Pradesh"
+        ),
+        (
+            "restaurant",
+            "restaurants near Huzurganj, Madhya Pradesh"
+        ),
+        (
+            "shop",
+            "shops near Huzurganj, Madhya Pradesh"
+        )
+    ]
 
-    if (tab === "following") {
+    total_found = 0
+    total_added = 0
 
-        followingTab.classList.add("active");
+    for category, text_query in searches:
 
-        sectionTitle.textContent =
-            "Following Businesses";
-    }
+        data = {
+            "textQuery": text_query
+        }
 
+        try:
 
-    if (tab === "offers") {
+            google_response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=15
+            )
 
-        offersTab.classList.add("active");
+        except requests.RequestException as error:
 
-        sectionTitle.textContent =
-            "Latest Offers";
-    }
-}
+            print(
+                f"Google Places error for {category}:",
+                error
+            )
 
+            continue
 
-// =========================================================
-// TAB EVENTS
-// =========================================================
+        if google_response.status_code != 200:
 
-nearbyTab.addEventListener(
-    "click",
-    () => {
+            print(
+                f"Google Places failed for {category}:",
+                google_response.status_code,
+                google_response.text
+            )
 
-        currentTab = "nearby";
+            continue
 
-        setActiveTab("nearby");
+        places = google_response.json().get(
+            "places",
+            []
+        )
 
-        renderBusinesses();
-    }
-);
+        total_found += len(places)
 
+        businesses_to_save = []
 
-followingTab.addEventListener(
-    "click",
-    () => {
+        for place in places:
 
-        currentTab = "following";
+            name = (
+                place.get(
+                    "displayName",
+                    {}
+                )
+                .get(
+                    "text",
+                    "Unknown"
+                )
+            )
 
-        setActiveTab("following");
+            address = place.get(
+                "formattedAddress",
+                ""
+            )
 
-        renderBusinesses();
-    }
-);
+            location = place.get(
+                "location",
+                {}
+            )
 
+            latitude = location.get(
+                "latitude"
+            )
 
-offersTab.addEventListener(
-    "click",
-    () => {
+            longitude = location.get(
+                "longitude"
+            )
 
-        currentTab = "offers";
+            businesses_to_save.append(
+                (
+                    name,
+                    category,
+                    latitude,
+                    longitude,
+                    address,
+                    None,
+                    None
+                )
+            )
 
-        setActiveTab("offers");
+        if businesses_to_save:
 
-        renderBusinesses();
-    }
-);
+            added = add_businesses(
+                businesses_to_save
+            )
 
-
-// =========================================================
-// SEARCH
-// =========================================================
-
-searchInput.addEventListener(
-    "input",
-    event => {
-
-        searchText =
-            event.target.value;
-
-        renderBusinesses();
-    }
-);
-
-
-// =========================================================
-// CATEGORY FILTERS
-// =========================================================
-
-filterButtons.forEach(
-    button => {
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                filterButtons.forEach(
-                    item =>
-                        item.classList.remove(
-                            "active"
-                        )
-                );
-
-
-                button.classList.add(
-                    "active"
-                );
-
-
-                currentCategory =
-                    button.dataset.category;
-
-
-                renderBusinesses();
-            }
-        );
-    }
-);
-
-
-// =========================================================
-// BOTTOM NAVIGATION
-// =========================================================
-
-homeNav.addEventListener(
-    "click",
-    () => {
-
-        window.location.href = "/";
-    }
-);
+            total_added += added
 
 
-profileNav.addEventListener(
-    "click",
-    () => {
-
-        window.location.href =
-            "/static/profile.html";
-    }
-);
-
-
-// =========================================================
-// CATEGORY ICON
-// =========================================================
-
-function getCategoryIcon(category) {
-
-    const value =
-        String(category || "")
-            .toLowerCase();
-
-
-    if (value.includes("cafe")) {
-        return "☕";
+    return {
+        "success": True,
+        "found": total_found,
+        "added": total_added,
+        "message": "Businesses loaded successfully"
     }
 
 
-    if (value.includes("restaurant")) {
-        return "🍽️";
+# =========================================================
+# FOLLOW / UNFOLLOW
+# =========================================================
+
+@app.post(
+    "/api/businesses/{business_id}/follow"
+)
+def follow_business(
+    business_id: int,
+    user_id: str | None = Cookie(default=None)
+):
+
+    if not user_id:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Please login first"
+        )
+
+    try:
+
+        user_id_int = int(user_id)
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session"
+        )
+
+    user = get_user_by_id(
+        user_id_int
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session"
+        )
+
+    business = get_business_by_id(
+        business_id
+    )
+
+    if not business:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found"
+        )
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id
+        FROM follows
+        WHERE user_id = ?
+        AND business_id = ?
+        """,
+        (
+            user_id_int,
+            business_id
+        )
+    )
+
+    existing = cursor.fetchone()
+
+    if existing:
+
+        cursor.execute(
+            """
+            DELETE FROM follows
+            WHERE user_id = ?
+            AND business_id = ?
+            """,
+            (
+                user_id_int,
+                business_id
+            )
+        )
+
+        following = False
+
+    else:
+
+        cursor.execute(
+            """
+            INSERT INTO follows
+            (
+                user_id,
+                business_id
+            )
+            VALUES (?, ?)
+            """,
+            (
+                user_id_int,
+                business_id
+            )
+        )
+
+        following = True
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "following": following
     }
 
 
-    if (value.includes("shop")) {
-        return "🛍️";
+# =========================================================
+# CHECK FOLLOW STATUS
+# =========================================================
+
+@app.get(
+    "/api/businesses/{business_id}/follow"
+)
+def check_following(
+    business_id: int,
+    user_id: str | None = Cookie(default=None)
+):
+
+    if not user_id:
+
+        return {
+            "following": False
+        }
+
+    try:
+
+        user_id_int = int(user_id)
+
+    except ValueError:
+
+        return {
+            "following": False
+        }
+
+    return {
+        "following": is_following(
+            user_id_int,
+            business_id
+        )
     }
 
 
-    return "🏪";
-}
+# =========================================================
+# FOLLOWED BUSINESSES
+# =========================================================
+
+@app.get("/api/following")
+def following(
+    user_id: str | None = Cookie(default=None)
+):
+
+    if not user_id:
+        return []
+
+    try:
+
+        user_id_int = int(user_id)
+
+    except ValueError:
+
+        return []
+
+    user = get_user_by_id(
+        user_id_int
+    )
+
+    if not user:
+        return []
+
+    data = get_followed_businesses(
+        user_id_int
+    )
+
+    return [
+        {
+            "id": business[0],
+            "name": business[1],
+            "category": business[2],
+            "latitude": business[3],
+            "longitude": business[4],
+            "address": business[5],
+            "offer": business[6],
+            "owner_id": business[7]
+        }
+        for business in data
+    ]
 
 
-// =========================================================
-// HTML ESCAPE
-// =========================================================
+# =========================================================
+# GET BUSINESS BY ID
+# =========================================================
 
-function escapeHtml(value) {
+@app.get(
+    "/api/businesses/{business_id}"
+)
+def get_business(
+    business_id: int
+):
 
-    return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+    business = get_business_by_id(
+        business_id
+    )
+
+    if not business:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found"
+        )
+
+    return {
+        "id": business[0],
+        "name": business[1],
+        "category": business[2],
+        "latitude": business[3],
+        "longitude": business[4],
+        "address": business[5],
+        "offer": business[6],
+        "owner_id": business[7]
+    }
 
 
-// =========================================================
-// INITIAL LOAD
-// =========================================================
+# =========================================================
+# OWNER LOGIN
+# =========================================================
 
-loadBusinesses();
+@app.post("/api/owner/login")
+def owner_login(
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    email = email.strip().lower()
+
+    user = get_user_by_email(email)
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner email or password"
+        )
+
+    user_id = user[0]
+    name = user[1]
+    user_email = user[2]
+    password_hash = user[3]
+    role = user[4]
+
+    if role != "owner":
+
+        raise HTTPException(
+            status_code=403,
+            detail="This account is not a business owner account"
+        )
+
+    if not verify_password(
+        password,
+        password_hash
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner email or password"
+        )
+
+    response.delete_cookie(
+        key="user_id",
+        path="/"
+    )
+
+    response.set_cookie(
+        key="owner_id",
+        value=str(user_id),
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+
+    return {
+        "success": True,
+        "message": "Owner login successful",
+        "owner": {
+            "id": user_id,
+            "name": name,
+            "email": user_email,
+            "role": role
+        }
+    }
+
+
+# =========================================================
+# CURRENT OWNER
+# =========================================================
+
+@app.get("/api/owner/me")
+def current_owner(
+    owner_id: str | None = Cookie(default=None)
+):
+
+    if not owner_id:
+
+        return {
+            "logged_in": False
+        }
+
+    try:
+
+        owner_id_int = int(owner_id)
+
+    except ValueError:
+
+        return {
+            "logged_in": False
+        }
+
+    owner = get_user_by_id(
+        owner_id_int
+    )
+
+    if not owner:
+
+        return {
+            "logged_in": False
+        }
+
+    if owner[3] != "owner":
+
+        return {
+            "logged_in": False
+        }
+
+    return {
+        "logged_in": True,
+        "owner": {
+            "id": owner[0],
+            "name": owner[1],
+            "email": owner[2],
+            "role": owner[3]
+        }
+    }
+
+
+# =========================================================
+# OWNER BUSINESSES
+# =========================================================
+
+@app.get("/api/owner/businesses")
+def owner_businesses(
+    owner_id: str | None = Cookie(default=None)
+):
+
+    if not owner_id:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Owner login required"
+        )
+
+    try:
+
+        owner_id_int = int(owner_id)
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner session"
+        )
+
+    owner = get_user_by_id(
+        owner_id_int
+    )
+
+    if not owner or owner[3] != "owner":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Owner access required"
+        )
+
+    data = get_owner_businesses(
+        owner_id_int
+    )
+
+    return [
+        {
+            "id": business[0],
+            "name": business[1],
+            "category": business[2],
+            "latitude": business[3],
+            "longitude": business[4],
+            "address": business[5],
+            "offer": business[6],
+            "owner_id": business[7]
+        }
+        for business in data
+    ]
+
+
+# =========================================================
+# UPDATE BUSINESS OFFER
+# =========================================================
+
+@app.post(
+    "/api/businesses/{business_id}/offer"
+)
+def update_offer(
+    business_id: int,
+    offer: str = Form(...),
+    owner_id: str | None = Cookie(default=None)
+):
+
+    if not owner_id:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Owner login required"
+        )
+
+    try:
+
+        owner_id_int = int(owner_id)
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner session"
+        )
+
+    owner = get_user_by_id(
+        owner_id_int
+    )
+
+    if not owner or owner[3] != "owner":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Owner access required"
+        )
+
+    offer = offer.strip()
+
+    if not offer:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Offer cannot be empty"
+        )
+
+    business = get_business_by_id(
+        business_id
+    )
+
+    if not business:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found"
+        )
+
+    if business[7] != owner_id_int:
+
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this business"
+        )
+
+    updated = update_business_offer(
+        business_id,
+        owner_id_int,
+        offer
+    )
+
+    if not updated:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Offer could not be updated"
+        )
+
+    return {
+        "success": True,
+        "business_id": business_id,
+        "offer": offer
+    }
+
+
+# =========================================================
+# ASSIGN BUSINESS TO OWNER
+# =========================================================
+
+@app.post(
+    "/api/owner/businesses/{business_id}/assign"
+)
+def assign_owner_business(
+    business_id: int,
+    owner_id: str | None = Cookie(default=None)
+):
+
+    if not owner_id:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Owner login required"
+        )
+
+    try:
+
+        owner_id_int = int(owner_id)
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner session"
+        )
+
+    owner = get_user_by_id(
+        owner_id_int
+    )
+
+    if not owner or owner[3] != "owner":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Owner access required"
+        )
+
+    business = get_business_by_id(
+        business_id
+    )
+
+    if not business:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found"
+        )
+
+    if business[7] is not None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Business already has an owner"
+        )
+
+    updated = assign_business_to_owner(
+        business_id,
+        owner_id_int
+    )
+
+    if not updated:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Business could not be assigned"
+        )
+
+    return {
+        "success": True,
+        "business_id": business_id,
+        "owner_id": owner_id_int
+    }
