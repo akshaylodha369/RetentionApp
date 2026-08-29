@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Owner Signup - RetentionApp</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+<main class="auth-container">
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            🏪
+        </div>
+
+        <h1>Create Owner Account</h1>
+
+        <p class="auth-subtitle">
+            Create your business owner account.
+        </p>
+
+
+        <!-- OWNER SIGNUP FORM -->
+
+        <form id="ownerSignupForm">
+
+            <input
+                type="text"
+                id="ownerName"
+                placeholder="Your name"
+                autocomplete="name"
+                required
+            >
+
+            <input
+                type="email"
+                id="ownerEmail"
+                placeholder="Business owner email"
+                autocomplete="email"
+                required
+            >
+
+            <input
+                type="password"
+                id="ownerPassword"
+                placeholder="Password (6+ characters)"
+                autocomplete="new-password"
+                minlength="6"
+                required
+            >
+
+            <button
+                type="submit"
+                class="auth-button"
+                id="ownerSignupButton"
+            >
+                Create Owner Account
+            </button>
+
+        </form>
+
+
+        <p
+            id="ownerSignupMessage"
+            class="auth-message"
+        ></p>
+
+
+        <div class="auth-divider">
+            OR
+        </div>
+
+
+        <button
+            id="backToOwnerLogin"
+            class="secondary-auth-button"
+        >
+            Already have an owner account? Login
+        </button>
+
+
+        <button
+            id="backToProfile"
+            class="secondary-auth-button"
+            style="margin-top: 10px;"
+        >
+            ← Back to Profile
+        </button>
+
+    </div>
+
+</main>
+
+
+<script>
+
+const ownerSignupForm =
+    document.getElementById(
+        "ownerSignupForm"
+    );
+
+const ownerSignupMessage =
+    document.getElementById(
+        "ownerSignupMessage"
+    );
+
+const ownerSignupButton =
+    document.getElementById(
+        "ownerSignupButton"
+    );
+
+
+// =========================
+// OWNER SIGNUP
+// =========================
+
+ownerSignupForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        const name =
+            document.getElementById(
+                "ownerName"
+            ).value
+            .trim();
+
+
+        const email =
+            document.getElementById(
+                "ownerEmail"
+            ).value
+            .trim()
+            .toLowerCase();
+
+
+        const password =
+            document.getElementById(
+                "ownerPassword"
+            ).value;
+
+
+        if (!name) {
+
+            ownerSignupMessage.textContent =
+                "❌ Name is required.";
+
+            return;
+
+        }
+
+
+        if (password.length < 6) {
+
+            ownerSignupMessage.textContent =
+                "❌ Password must be at least 6 characters.";
+
+            return;
+
+        }
+
+
+        ownerSignupMessage.textContent =
+            "Creating owner account...";
+
+        ownerSignupButton.disabled = true;
+
+
+        try {
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "name",
+                name
+            );
+
+
+            formData.append(
+                "email",
+                email
+            );
+
+
+            formData.append(
+                "password",
+                password
+            );
+
+
+            const response =
+                await fetch(
+                    "/api/owner/signup",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Owner signup failed"
+                );
+
+            }
+
+
+            ownerSignupMessage.textContent =
+                "✅ Owner account created! Redirecting...";
+
+
+            setTimeout(
+                function() {
+
+                    window.location.href =
+                        "/static/owner-login.html";
+
+                },
+                800
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Owner signup error:",
+                error
+            );
+
+
+            ownerSignupMessage.textContent =
+                "❌ " + error.message;
+
+
+            ownerSignupButton.disabled = false;
+
+        }
+
+    }
+);
+
+
+// =========================
+// OWNER LOGIN
+// =========================
+
+document.getElementById(
+    "backToOwnerLogin"
+).addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/owner-login.html";
+
+    }
+);
+
+
+// =========================
+// PROFILE
+// =========================
+
+document.getElementById(
+    "backToProfile"
+).addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/profile.html";
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

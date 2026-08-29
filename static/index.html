@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>RetentionApp</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <!-- =========================
+         TOP BAR
+    ========================== -->
+
+    <header class="top-bar">
+
+        <h1>RetentionApp</h1>
+
+        <a
+            href="/static/profile.html"
+            class="profile"
+            aria-label="Profile"
+        >
+            👤
+        </a>
+
+    </header>
+
+
+    <!-- =========================
+         MAIN
+    ========================== -->
+
+    <main>
+
+        <!-- =========================
+             WELCOME
+        ========================== -->
+
+        <section class="welcome">
+
+            <h2>Discover businesses near you</h2>
+
+            <p>
+                Follow your favourite businesses and
+                discover their latest offers.
+            </p>
+
+        </section>
+
+
+        <!-- =========================
+             SEARCH
+        ========================== -->
+
+        <section class="search-box">
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search businesses..."
+                autocomplete="off"
+            >
+
+        </section>
+
+
+        <!-- =========================
+             CATEGORY FILTERS
+        ========================== -->
+
+        <section class="filters">
+
+            <button
+                class="filter-btn active"
+                data-category="all"
+                type="button"
+            >
+                All
+            </button>
+
+            <button
+                class="filter-btn"
+                data-category="cafe"
+                type="button"
+            >
+                ☕ Cafe
+            </button>
+
+            <button
+                class="filter-btn"
+                data-category="restaurant"
+                type="button"
+            >
+                🍽️ Restaurant
+            </button>
+
+            <button
+                class="filter-btn"
+                data-category="shop"
+                type="button"
+            >
+                🛍️ Shop
+            </button>
+
+        </section>
+
+
+        <!-- =========================
+             MAIN TABS
+        ========================== -->
+
+        <section class="tabs">
+
+            <button
+                id="nearbyTab"
+                class="active"
+                type="button"
+            >
+                📍 Nearby
+            </button>
+
+            <button
+                id="followingTab"
+                type="button"
+            >
+                ❤️ Following
+            </button>
+
+            <button
+                id="offersTab"
+                type="button"
+            >
+                🎟️ Offers
+            </button>
+
+        </section>
+
+
+        <!-- =========================
+             BUSINESS SECTION
+        ========================== -->
+
+        <section class="business-section">
+
+            <h2 id="sectionTitle">
+                Nearby Businesses
+            </h2>
+
+            <div id="businessList">
+
+                <p>
+                    Loading businesses...
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         BOTTOM NAV
+    ========================== -->
+
+    <nav class="bottom-nav">
+
+        <button
+            id="homeNav"
+            class="active"
+            type="button"
+            aria-label="Home"
+        >
+            🏠
+        </button>
+
+        <button
+            id="profileNav"
+            type="button"
+            aria-label="Profile"
+        >
+            👤
+        </button>
+
+    </nav>
+
+
+    <!-- =========================
+         JAVASCRIPT
+    ========================== -->
+
+    <script src="/static/app.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Login - RetentionApp</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+
+<main class="auth-container">
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            👤
+        </div>
+
+        <h1>Welcome back</h1>
+
+        <p class="auth-subtitle">
+            Login to discover offers from businesses you love.
+        </p>
+
+
+        <!-- LOGIN FORM -->
+
+        <form id="loginForm">
+
+            <input
+                type="email"
+                id="loginEmail"
+                placeholder="Email"
+                autocomplete="email"
+                required
+            >
+
+            <input
+                type="password"
+                id="loginPassword"
+                placeholder="Password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button
+                type="submit"
+                class="auth-button"
+                id="loginButton"
+            >
+                Login
+            </button>
+
+        </form>
+
+
+        <p
+            id="loginMessage"
+            class="auth-message"
+        ></p>
+
+
+        <div class="auth-divider">
+            OR
+        </div>
+
+
+        <button
+            id="showSignup"
+            class="secondary-auth-button"
+        >
+            Create a new account
+        </button>
+
+
+        <button
+            id="ownerLogin"
+            class="secondary-auth-button"
+            style="margin-top:10px;"
+        >
+            🏪 Business Owner Login
+        </button>
+
+    </div>
+
+</main>
+
+
+<script>
+
+
+// =========================
+// ELEMENTS
+// =========================
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const loginMessage =
+    document.getElementById("loginMessage");
+
+const loginButton =
+    document.getElementById("loginButton");
+
+const showSignup =
+    document.getElementById("showSignup");
+
+const ownerLogin =
+    document.getElementById("ownerLogin");
+
+
+// =========================
+// CUSTOMER LOGIN
+// =========================
+
+loginForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        const email =
+            document.getElementById(
+                "loginEmail"
+            ).value
+            .trim()
+            .toLowerCase();
+
+
+        const password =
+            document.getElementById(
+                "loginPassword"
+            ).value;
+
+
+        loginMessage.textContent =
+            "Logging in...";
+
+        loginButton.disabled = true;
+
+        loginButton.textContent =
+            "Logging in...";
+
+
+        try {
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "email",
+                email
+            );
+
+            formData.append(
+                "password",
+                password
+            );
+
+
+            const response =
+                await fetch(
+                    "/api/login",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Login failed"
+                );
+
+            }
+
+
+            loginMessage.textContent =
+                "✅ Login successful!";
+
+
+            setTimeout(
+                function() {
+
+                    window.location.href =
+                        "/";
+
+                },
+                500
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Login error:",
+                error
+            );
+
+
+            loginMessage.textContent =
+                "❌ " + error.message;
+
+
+            loginButton.disabled = false;
+
+            loginButton.textContent =
+                "Login";
+
+        }
+
+    }
+);
+
+
+// =========================
+// SIGNUP
+// =========================
+
+showSignup.addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/signup.html";
+
+    }
+);
+
+
+// =========================
+// OWNER LOGIN
+// =========================
+
+ownerLogin.addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/owner-login.html";
+
+    }
+);
+
+</script>
+
+
+</body>
+
+</html>

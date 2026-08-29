@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Following - RetentionApp</title>
+
+<link
+    rel="stylesheet"
+    href="/static/style.css"
+>
+```
+
+</head>
+
+<body>
+
+```
+<!-- TOP BAR -->
+
+<header class="top-bar">
+
+    <a
+        href="/"
+        class="profile"
+    >
+        🏠
+    </a>
+
+    <h1>Following</h1>
+
+    <a
+        href="/static/profile.html"
+        class="profile"
+    >
+        👤
+    </a>
+
+</header>
+
+
+
+<main>
+
+    <section class="welcome">
+
+        <h2>
+            ❤️ Your Following
+        </h2>
+
+        <p>
+            Businesses you follow.
+        </p>
+
+    </section>
+
+
+
+    <section class="business-section">
+
+        <div id="followingList">
+
+            <p>
+                Loading...
+            </p>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+
+<!-- BOTTOM NAV -->
+
+<nav class="bottom-nav">
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        🏠
+    </button>
+
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        📍
+    </button>
+
+
+    <button
+        onclick="window.location.href='/static/offers.html'"
+    >
+        🎟️
+    </button>
+
+
+    <button
+        onclick="window.location.href='/static/profile.html'"
+    >
+        👤
+    </button>
+
+</nav>
+
+
+
+<script>
+
+    async function loadFollowing() {
+
+        const list =
+            document.getElementById(
+                "followingList"
+            );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/following"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Failed to load following"
+                );
+
+            }
+
+
+            const businesses =
+                await response.json();
+
+
+            list.innerHTML = "";
+
+
+            if (
+                !businesses ||
+                businesses.length === 0
+            ) {
+
+                list.innerHTML = `
+
+                    <div class="offer-card">
+
+                        <h2>
+                            ❤️ No businesses yet
+                        </h2>
+
+                        <p>
+                            Follow businesses to see
+                            them here.
+                        </p>
+
+                        <a
+                            href="/"
+                            class="profile-card-button"
+                        >
+                            Discover Businesses
+                        </a>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+
+            businesses.forEach(
+                function(business) {
+
+                    const card =
+                        document.createElement(
+                            "a"
+                        );
+
+
+                    card.href =
+                        `/static/business.html?id=${business.id}`;
+
+
+                    card.className =
+                        "business-link";
+
+
+                    card.innerHTML = `
+
+                        <div class="business-card">
+
+                            <div>
+
+                                <h3>
+                                    🏪 ${business.name}
+                                </h3>
+
+                                <p>
+                                    ${business.category || "Business"}
+                                </p>
+
+                                ${
+                                    business.address
+                                    ? `<p>📍 ${business.address}</p>`
+                                    : ""
+                                }
+
+                                ${
+                                    business.offer
+                                    ? `<p>🎟️ ${business.offer}</p>`
+                                    : `<p>🎟️ No current offer</p>`
+                                }
+
+                            </div>
+
+                            <span>
+                                ❤️
+                            </span>
+
+                        </div>
+
+                    `;
+
+
+                    list.appendChild(card);
+
+                }
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Following error:",
+                error
+            );
+
+
+            list.innerHTML = `
+
+                <div class="offer-card">
+
+                    <h2>
+                        ⚠️ Unable to load
+                    </h2>
+
+                    <p>
+                        Please try again later.
+                    </p>
+
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+    loadFollowing();
+
+</script>
+```
+
+</body>
+
+</html>

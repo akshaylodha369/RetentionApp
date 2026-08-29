@@ -1,0 +1,372 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Profile - RetentionApp</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+
+<!-- =========================
+     TOP BAR
+========================== -->
+
+<header class="top-bar">
+
+    <h1>RetentionApp</h1>
+
+    <a
+        href="/"
+        class="profile"
+    >
+        🏠
+    </a>
+
+</header>
+
+
+<!-- =========================
+     MAIN
+========================== -->
+
+<main>
+
+    <section class="profile-page">
+
+        <div class="profile-icon">
+            👤
+        </div>
+
+        <h2 id="userName">
+            Loading...
+        </h2>
+
+        <p id="userEmail">
+            Loading...
+        </p>
+
+
+        <!-- =========================
+             FOLLOWING
+        ========================== -->
+
+        <div class="profile-card">
+
+            <div class="profile-card-icon">
+                ❤️
+            </div>
+
+            <div class="profile-card-content">
+
+                <h3>Your Following</h3>
+
+                <p>
+                    Businesses you follow will
+                    appear here.
+                </p>
+
+            </div>
+
+            <a
+                href="/"
+                class="profile-card-button"
+                onclick="openFollowing(event)"
+            >
+                View Following
+            </a>
+
+        </div>
+
+
+        <!-- =========================
+             OFFERS
+        ========================== -->
+
+        <div class="profile-card">
+
+            <div class="profile-card-icon">
+                🎟️
+            </div>
+
+            <div class="profile-card-content">
+
+                <h3>Your Offers</h3>
+
+                <p>
+                    Offers from businesses
+                    you follow.
+                </p>
+
+            </div>
+
+            <a
+                href="/static/offers.html"
+                class="profile-card-button"
+            >
+                View Offers
+            </a>
+
+        </div>
+
+
+        <!-- =========================
+             OWNER DASHBOARD
+        ========================== -->
+
+        <div class="profile-card owner-card">
+
+            <div class="profile-card-icon">
+                🏪
+            </div>
+
+            <div class="profile-card-content">
+
+                <h3>Business Owner?</h3>
+
+                <p>
+                    Manage your business and
+                    create offers.
+                </p>
+
+            </div>
+
+            <a
+                href="/static/owner-login.html"
+                class="profile-card-button"
+            >
+                Owner Dashboard
+            </a>
+
+        </div>
+
+
+        <!-- =========================
+             LOGOUT
+        ========================== -->
+
+        <button
+            id="logoutButton"
+            class="logout-button"
+        >
+            Logout
+        </button>
+
+        <p
+            id="profileMessage"
+            class="auth-message"
+        ></p>
+
+    </section>
+
+</main>
+
+
+<!-- =========================
+     BOTTOM NAV
+========================== -->
+
+<nav class="bottom-nav">
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        🏠
+    </button>
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        📍
+    </button>
+
+    <button
+        onclick="window.location.href='/static/offers.html'"
+    >
+        🎟️
+    </button>
+
+    <button class="active">
+        👤
+    </button>
+
+</nav>
+
+
+<!-- =========================
+     JAVASCRIPT
+========================== -->
+
+<script>
+
+
+// =========================
+// LOAD PROFILE
+// =========================
+
+async function loadProfile() {
+
+    try {
+
+        const response =
+            await fetch("/api/me");
+
+        const data =
+            await response.json();
+
+
+        if (!data.logged_in) {
+
+            window.location.href =
+                "/static/login.html";
+
+            return;
+
+        }
+
+
+        document.getElementById(
+            "userName"
+        ).textContent =
+            data.user.name;
+
+
+        document.getElementById(
+            "userEmail"
+        ).textContent =
+            data.user.email;
+
+
+    } catch (error) {
+
+        console.error(
+            "Profile error:",
+            error
+        );
+
+
+        document.getElementById(
+            "userName"
+        ).textContent =
+            "Unable to load profile";
+
+
+        document.getElementById(
+            "userEmail"
+        ).textContent =
+            "";
+
+    }
+
+}
+
+
+// =========================
+// OPEN FOLLOWING
+// =========================
+
+function openFollowing(event) {
+
+    event.preventDefault();
+
+    window.location.href = "/";
+
+}
+
+
+// =========================
+// LOGOUT
+// =========================
+
+document.getElementById(
+    "logoutButton"
+).addEventListener(
+    "click",
+    async function() {
+
+        const button = this;
+
+        button.disabled = true;
+
+        button.textContent =
+            "Logging out...";
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/logout",
+                    {
+                        method: "POST"
+                    }
+                );
+
+
+            if (response.ok) {
+
+                window.location.href =
+                    "/static/login.html";
+
+                return;
+
+            }
+
+
+            throw new Error(
+                "Logout failed"
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Logout error:",
+                error
+            );
+
+
+            button.disabled = false;
+
+            button.textContent =
+                "Logout";
+
+
+            document.getElementById(
+                "profileMessage"
+            ).textContent =
+                "❌ Unable to logout. Please try again.";
+
+        }
+
+    }
+);
+
+
+// =========================
+// START
+// =========================
+
+loadProfile();
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,245 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Owner Login - RetentionApp</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+<main class="auth-container">
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            🏪
+        </div>
+
+        <h1>Business Owner</h1>
+
+        <p class="auth-subtitle">
+            Login to manage your business and offers.
+        </p>
+
+
+        <!-- OWNER LOGIN FORM -->
+
+        <form id="ownerLoginForm">
+
+            <input
+                type="email"
+                id="ownerEmail"
+                placeholder="Business owner email"
+                autocomplete="email"
+                required
+            >
+
+            <input
+                type="password"
+                id="ownerPassword"
+                placeholder="Password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button
+                type="submit"
+                class="auth-button"
+                id="ownerLoginButton"
+            >
+                Login as Owner
+            </button>
+
+        </form>
+
+
+        <p
+            id="ownerLoginMessage"
+            class="auth-message"
+        ></p>
+
+
+        <div class="auth-divider">
+            OR
+        </div>
+
+
+        <a
+            href="/static/owner-signup.html"
+            class="secondary-auth-button"
+            style="
+                display: block;
+                text-align: center;
+                text-decoration: none;
+            "
+        >
+            Create Owner Account
+        </a>
+
+
+        <button
+            id="backToProfile"
+            class="secondary-auth-button"
+        >
+            ← Back to Profile
+        </button>
+
+    </div>
+
+</main>
+
+
+<script>
+
+const ownerLoginForm =
+    document.getElementById("ownerLoginForm");
+
+const ownerLoginMessage =
+    document.getElementById("ownerLoginMessage");
+
+const ownerLoginButton =
+    document.getElementById("ownerLoginButton");
+
+const backToProfile =
+    document.getElementById("backToProfile");
+
+
+// =========================
+// OWNER LOGIN
+// =========================
+
+ownerLoginForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        const email =
+            document.getElementById(
+                "ownerEmail"
+            ).value
+            .trim()
+            .toLowerCase();
+
+
+        const password =
+            document.getElementById(
+                "ownerPassword"
+            ).value;
+
+
+        ownerLoginMessage.textContent =
+            "Logging in...";
+
+        ownerLoginButton.disabled = true;
+
+
+        try {
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "email",
+                email
+            );
+
+            formData.append(
+                "password",
+                password
+            );
+
+
+            const response =
+                await fetch(
+                    "/api/owner/login",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Owner login failed"
+                );
+
+            }
+
+
+            ownerLoginMessage.textContent =
+                "✅ Owner login successful!";
+
+
+            setTimeout(
+                function() {
+
+                    window.location.href =
+                        "/static/owner-dashboard.html";
+
+                },
+                500
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Owner login error:",
+                error
+            );
+
+
+            ownerLoginMessage.textContent =
+                "❌ " + error.message;
+
+            ownerLoginButton.disabled = false;
+
+        }
+
+    }
+);
+
+
+// =========================
+// BACK TO PROFILE
+// =========================
+
+backToProfile.addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/profile.html";
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

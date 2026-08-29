@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Offers - RetentionApp</title>
+
+<link
+    rel="stylesheet"
+    href="/static/style.css"
+>
+```
+
+</head>
+
+<body>
+
+```
+<!-- =========================
+     TOP BAR
+========================== -->
+
+<header class="top-bar">
+
+    <a
+        href="/"
+        class="back-button"
+    >
+        ←
+    </a>
+
+    <h1>Offers</h1>
+
+    <a
+        href="/static/profile.html"
+        class="profile"
+    >
+        👤
+    </a>
+
+</header>
+
+
+<!-- =========================
+     MAIN
+========================== -->
+
+<main>
+
+    <section class="welcome">
+
+        <h2>
+            🎟️ Your Offers
+        </h2>
+
+        <p>
+            Offers from businesses you follow.
+        </p>
+
+    </section>
+
+
+    <!-- SEARCH -->
+
+    <section class="search-box">
+
+        <input
+            type="text"
+            id="offerSearch"
+            placeholder="Search offers..."
+        >
+
+    </section>
+
+
+    <!-- OFFERS -->
+
+    <section class="business-section">
+
+        <div id="offersList">
+
+            <p>
+                Loading offers...
+            </p>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- =========================
+     BOTTOM NAV
+========================== -->
+
+<nav class="bottom-nav">
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        🏠
+    </button>
+
+    <button
+        onclick="window.location.href='/'"
+    >
+        📍
+    </button>
+
+    <button
+        class="active"
+    >
+        🎟️
+    </button>
+
+    <button
+        onclick="window.location.href='/static/profile.html'"
+    >
+        👤
+    </button>
+
+</nav>
+
+
+<!-- =========================
+     JAVASCRIPT
+========================== -->
+
+<script>
+
+    const offersList =
+        document.getElementById("offersList");
+
+    const offerSearch =
+        document.getElementById("offerSearch");
+
+
+    let offers = [];
+
+
+    // =========================
+    // RENDER OFFERS
+    // =========================
+
+    function renderOffers(data) {
+
+        offersList.innerHTML = "";
+
+
+        if (!data || data.length === 0) {
+
+            offersList.innerHTML = `
+
+                <div class="offer-card">
+
+                    <h2>
+                        🎟️ No offers yet
+                    </h2>
+
+                    <p>
+                        Offers from businesses
+                        you follow will appear here.
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        data.forEach(function(business) {
+
+            const card =
+                document.createElement("a");
+
+
+            card.href =
+                `/static/business.html?id=${business.id}`;
+
+
+            card.className =
+                "business-link";
+
+
+            card.innerHTML = `
+
+                <div class="offer-card">
+
+                    <h2>
+                        🎟️ ${business.offer}
+                    </h2>
+
+                    <h3>
+                        🏪 ${business.name}
+                    </h3>
+
+                    <p>
+                        ${business.category || "Business"}
+                    </p>
+
+                    ${
+                        business.address
+                        ? `<p>📍 ${business.address}</p>`
+                        : ""
+                    }
+
+                    <p class="offer-action">
+                        View offer details →
+                    </p>
+
+                </div>
+
+            `;
+
+
+            offersList.appendChild(card);
+
+        });
+
+    }
+
+
+    // =========================
+    // LOAD FOLLOWED OFFERS
+    // =========================
+
+    async function loadOffers() {
+
+        try {
+
+            const response =
+                await fetch("/api/following");
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Failed to load followed businesses"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            offers =
+                data.filter(function(business) {
+
+                    return (
+                        business.offer &&
+                        business.offer.trim() !== ""
+                    );
+
+                });
+
+
+            renderOffers(offers);
+
+
+        } catch (error) {
+
+            console.error(
+                "Offers error:",
+                error
+            );
+
+
+            offersList.innerHTML = `
+
+                <div class="offer-card">
+
+                    <h2>
+                        ⚠️ Unable to load offers
+                    </h2>
+
+                    <p>
+                        Please try again later.
+                    </p>
+
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+    // =========================
+    // SEARCH OFFERS
+    // =========================
+
+    offerSearch.addEventListener(
+        "input",
+        function() {
+
+            const query =
+                offerSearch.value
+                    .toLowerCase()
+                    .trim();
+
+
+            const filtered =
+                offers.filter(function(business) {
+
+                    const name =
+                        (business.name || "")
+                            .toLowerCase();
+
+                    const category =
+                        (business.category || "")
+                            .toLowerCase();
+
+                    const offer =
+                        (business.offer || "")
+                            .toLowerCase();
+
+
+                    return (
+                        name.includes(query) ||
+                        category.includes(query) ||
+                        offer.includes(query)
+                    );
+
+                });
+
+
+            renderOffers(filtered);
+
+        }
+    );
+
+
+    // =========================
+    // START
+    // =========================
+
+    loadOffers();
+
+</script>
+```
+
+</body>
+
+</html>
