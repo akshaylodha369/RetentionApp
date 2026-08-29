@@ -1,4 +1,9 @@
 // =========================================================
+// RETENTION APP - static/app.js
+// =========================================================
+
+
+// =========================================================
 // STATE
 // =========================================================
 
@@ -45,61 +50,6 @@ const profileNav =
 
 
 // =========================================================
-// GET USER LOCATION
-// =========================================================
-
-function getUserLocation() {
-
-    return new Promise((resolve, reject) => {
-
-        if (!navigator.geolocation) {
-
-            reject(
-                new Error(
-                    "Geolocation is not supported"
-                )
-            );
-
-            return;
-        }
-
-
-        navigator.geolocation.getCurrentPosition(
-            position => {
-
-                userLatitude =
-                    position.coords.latitude;
-
-                userLongitude =
-                    position.coords.longitude;
-
-                resolve({
-                    latitude: userLatitude,
-                    longitude: userLongitude
-                });
-            },
-
-            error => {
-
-                console.error(
-                    "Location error:",
-                    error
-                );
-
-                reject(error);
-            },
-
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 300000
-            }
-        );
-    });
-}
-
-
-// =========================================================
 // LOAD NEARBY BUSINESSES
 // =========================================================
 
@@ -108,100 +58,158 @@ async function loadNearbyBusinesses() {
     sectionTitle.textContent =
         "Finding Nearby Businesses...";
 
-
     businessList.innerHTML = `
         <div class="business-card">
             <div>
-                <h3>📍 Finding your location...</h3>
+                <h3>📍 Finding businesses near you...</h3>
                 <p>
-                    Looking for businesses near you.
+                    Please allow location access.
                 </p>
             </div>
         </div>
     `;
 
 
-    try {
-
-        const location =
-            await getUserLocation();
-
-
-        // First load businesses from Google
-        // around the user's location.
-
-        const loadResponse =
-            await fetch(
-                `/api/load-businesses?lat=${encodeURIComponent(
-                    location.latitude
-                )}&lng=${encodeURIComponent(
-                    location.longitude
-                )}`
-            );
-
-
-        if (!loadResponse.ok) {
-
-            throw new Error(
-                "Unable to load nearby businesses"
-            );
-        }
-
-
-        // Now ask backend for businesses
-        // sorted by actual distance.
-
-        const nearbyResponse =
-            await fetch(
-                `/api/nearby?lat=${encodeURIComponent(
-                    location.latitude
-                )}&lng=${encodeURIComponent(
-                    location.longitude
-                )}`
-            );
-
-
-        if (!nearbyResponse.ok) {
-
-            throw new Error(
-                "Unable to find nearby businesses"
-            );
-        }
-
-
-        allBusinesses =
-            await nearbyResponse.json();
-
-
-        renderBusinesses();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        sectionTitle.textContent =
-            "Nearby Businesses";
-
+    if (!navigator.geolocation) {
 
         businessList.innerHTML = `
             <div class="business-card">
-
                 <div>
-
-                    <h3>📍 Location unavailable</h3>
-
+                    <h3>Location unavailable</h3>
                     <p>
-                        Please allow location access
-                        and refresh the page.
+                        Your browser does not support location.
                     </p>
-
                 </div>
-
             </div>
         `;
+
+        return;
     }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        async function(position) {
+
+            userLatitude =
+                position.coords.latitude;
+
+            userLongitude =
+                position.coords.longitude;
+
+
+            console.log(
+                "User location:",
+                userLatitude,
+                userLongitude
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/nearby?lat=${encodeURIComponent(
+                            userLatitude
+                        )}&lng=${encodeURIComponent(
+                            userLongitude
+                        )}`
+                    );
+
+
+                if (!response.ok) {
+
+                    const errorData =
+                        await response.json()
+                            .catch(() => ({}));
+
+                    throw new Error(
+                        errorData.detail ||
+                        "Failed to load nearby businesses"
+                    );
+                }
+
+
+                allBusinesses =
+                    await response.json();
+
+
+                sectionTitle.textContent =
+                    "Nearby Businesses";
+
+
+                renderBusinesses();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Nearby error:",
+                    error
+                );
+
+
+                businessList.innerHTML = `
+                    <div class="business-card">
+                        <div>
+                            <h3>Unable to load businesses</h3>
+                            <p>
+                                ${escapeHtml(
+                                    error.message
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        },
+
+
+        function(error) {
+
+            console.error(
+                "Location error:",
+                error
+            );
+
+
+            let message =
+                "Location permission is required to find nearby businesses.";
+
+
+            if (
+                error.code ===
+                error.PERMISSION_DENIED
+            ) {
+
+                message =
+                    "Please allow location access in your browser and refresh the page.";
+            }
+
+
+            businessList.innerHTML = `
+                <div class="business-card">
+                    <div>
+                        <h3>📍 Location required</h3>
+                        <p>
+                            ${escapeHtml(message)}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+
+            sectionTitle.textContent =
+                "Nearby Businesses";
+        },
+
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+    );
 }
 
 
@@ -214,9 +222,7 @@ async function loadBusinesses() {
     try {
 
         const response =
-            await fetch(
-                "/api/businesses"
-            );
+            await fetch("/api/businesses");
 
 
         if (!response.ok) {
@@ -260,11 +266,15 @@ function getFilteredBusinesses() {
 
     // CATEGORY FILTER
 
-    if (currentCategory !== "all") {
+    if (
+        currentCategory !==
+        "all"
+    ) {
 
         businesses =
             businesses.filter(
                 business =>
+
                     String(
                         business.category || ""
                     )
@@ -278,7 +288,9 @@ function getFilteredBusinesses() {
 
     // SEARCH FILTER
 
-    if (searchText.trim()) {
+    if (
+        searchText.trim()
+    ) {
 
         const query =
             searchText
@@ -293,22 +305,19 @@ function getFilteredBusinesses() {
                     const name =
                         String(
                             business.name || ""
-                        )
-                        .toLowerCase();
+                        ).toLowerCase();
 
 
                     const category =
                         String(
                             business.category || ""
-                        )
-                        .toLowerCase();
+                        ).toLowerCase();
 
 
                     const address =
                         String(
                             business.address || ""
-                        )
-                        .toLowerCase();
+                        ).toLowerCase();
 
 
                     return (
@@ -331,7 +340,10 @@ function getFilteredBusinesses() {
 
 function renderBusinesses() {
 
-    if (currentTab === "following") {
+    if (
+        currentTab ===
+        "following"
+    ) {
 
         loadFollowingBusinesses();
 
@@ -343,9 +355,10 @@ function renderBusinesses() {
         getFilteredBusinesses();
 
 
-    // OFFERS TAB
-
-    if (currentTab === "offers") {
+    if (
+        currentTab ===
+        "offers"
+    ) {
 
         businesses =
             businesses.filter(
@@ -358,26 +371,16 @@ function renderBusinesses() {
     }
 
 
-    // EMPTY STATE
-
     if (!businesses.length) {
 
         businessList.innerHTML = `
             <div class="business-card">
-
                 <div>
-
-                    <h3>
-                        No businesses found
-                    </h3>
-
+                    <h3>No businesses found</h3>
                     <p>
-                        Try another search or
-                        category.
+                        Try another search or category.
                     </p>
-
                 </div>
-
             </div>
         `;
 
@@ -385,81 +388,124 @@ function renderBusinesses() {
     }
 
 
-    // RENDER
-
     businessList.innerHTML =
         businesses
             .map(
-                business => {
-
-                    const icon =
-                        getCategoryIcon(
-                            business.category
-                        );
-
-
-                    const offerText =
-                        business.offer
-                            ? `🎟️ ${escapeHtml(
-                                business.offer
-                            )}`
-                            : "No active offer";
-
-
-                    const distanceText =
-                        business.distance_km !== null &&
-                        business.distance_km !== undefined
-                            ? `📍 ${business.distance_km} km away`
-                            : `📍 ${escapeHtml(
-                                business.address ||
-                                "Address unavailable"
-                            )}`;
-
-
-                    return `
-                        <a
-                            href="/static/business.html?id=${business.id}"
-                            class="business-link"
-                        >
-
-                            <div class="business-card">
-
-                                <div>
-
-                                    <h3>
-                                        ${icon}
-                                        ${escapeHtml(
-                                            business.name
-                                        )}
-                                    </h3>
-
-                                    <p>
-                                        ${escapeHtml(
-                                            business.category || ""
-                                        )}
-                                    </p>
-
-                                    <p>
-                                        ${distanceText}
-                                    </p>
-
-                                    <p>
-                                        ${offerText}
-                                    </p>
-
-                                </div>
-
-                                <span>
-                                    →
-                                </span>
-
-                            </div>
-
-                        </a>
-                    `;
-                }
+                business =>
+                    createBusinessCard(
+                        business
+                    )
             )
             .join("");
+}
+
+
+// =========================================================
+// BUSINESS CARD
+// =========================================================
+
+function createBusinessCard(
+    business
+) {
+
+    const icon =
+        getCategoryIcon(
+            business.category
+        );
+
+
+    const offerText =
+        business.offer
+            ? `🎟️ ${escapeHtml(
+                business.offer
+            )}`
+            : "No active offer";
+
+
+    let distanceText = "";
+
+
+    if (
+        typeof business.distance_km ===
+        "number"
+    ) {
+
+        if (
+            business.distance_km <
+            1
+        ) {
+
+            distanceText =
+                `${Math.round(
+                    business.distance_km * 1000
+                )} m away`;
+
+        } else {
+
+            distanceText =
+                `${business.distance_km.toFixed(
+                    1
+                )} km away`;
+        }
+    }
+
+
+    return `
+        <a
+            href="/static/business.html?id=${business.id}"
+            class="business-link"
+        >
+
+            <div class="business-card">
+
+                <div>
+
+                    <h3>
+                        ${icon}
+                        ${escapeHtml(
+                            business.name
+                        )}
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            business.category || ""
+                        )}
+                    </p>
+
+                    <p>
+                        📍
+                        ${escapeHtml(
+                            business.address ||
+                            "Address unavailable"
+                        )}
+                    </p>
+
+                    ${
+                        distanceText
+                            ? `
+                                <p>
+                                    📏
+                                    ${distanceText}
+                                </p>
+                            `
+                            : ""
+                    }
+
+                    <p>
+                        ${offerText}
+                    </p>
+
+                </div>
+
+                <span>
+                    →
+                </span>
+
+            </div>
+
+        </a>
+    `;
 }
 
 
@@ -481,6 +527,32 @@ async function loadFollowingBusinesses() {
             );
 
 
+        if (
+            response.status ===
+            401
+        ) {
+
+            businessList.innerHTML = `
+                <div class="business-card">
+
+                    <div>
+
+                        <h3>Login required</h3>
+
+                        <p>
+                            Please login to see
+                            businesses you follow.
+                        </p>
+
+                    </div>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
         if (!response.ok) {
 
             throw new Error(
@@ -493,9 +565,11 @@ async function loadFollowingBusinesses() {
             await response.json();
 
 
-        // SEARCH FILTER
+        // SEARCH
 
-        if (searchText.trim()) {
+        if (
+            searchText.trim()
+        ) {
 
             const query =
                 searchText
@@ -510,22 +584,19 @@ async function loadFollowingBusinesses() {
                         const name =
                             String(
                                 business.name || ""
-                            )
-                            .toLowerCase();
+                            ).toLowerCase();
 
 
                         const category =
                             String(
                                 business.category || ""
-                            )
-                            .toLowerCase();
+                            ).toLowerCase();
 
 
                         const address =
                             String(
                                 business.address || ""
-                            )
-                            .toLowerCase();
+                            ).toLowerCase();
 
 
                         return (
@@ -538,9 +609,12 @@ async function loadFollowingBusinesses() {
         }
 
 
-        // CATEGORY FILTER
+        // CATEGORY
 
-        if (currentCategory !== "all") {
+        if (
+            currentCategory !==
+            "all"
+        ) {
 
             businesses =
                 businesses.filter(
@@ -550,8 +624,7 @@ async function loadFollowingBusinesses() {
                         )
                         .toLowerCase()
                         .includes(
-                            currentCategory
-                                .toLowerCase()
+                            currentCategory.toLowerCase()
                         )
                 );
         }
@@ -564,13 +637,11 @@ async function loadFollowingBusinesses() {
 
                     <div>
 
-                        <h3>
-                            No businesses found
-                        </h3>
+                        <h3>No businesses found</h3>
 
                         <p>
-                            You are not following
-                            any matching businesses.
+                            You are not following any
+                            matching businesses.
                         </p>
 
                     </div>
@@ -585,68 +656,10 @@ async function loadFollowingBusinesses() {
         businessList.innerHTML =
             businesses
                 .map(
-                    business => {
-
-                        const icon =
-                            getCategoryIcon(
-                                business.category
-                            );
-
-
-                        const offerText =
-                            business.offer
-                                ? `🎟️ ${escapeHtml(
-                                    business.offer
-                                )}`
-                                : "No active offer";
-
-
-                        return `
-                            <a
-                                href="/static/business.html?id=${business.id}"
-                                class="business-link"
-                            >
-
-                                <div class="business-card">
-
-                                    <div>
-
-                                        <h3>
-                                            ${icon}
-                                            ${escapeHtml(
-                                                business.name
-                                            )}
-                                        </h3>
-
-                                        <p>
-                                            ${escapeHtml(
-                                                business.category || ""
-                                            )}
-                                        </p>
-
-                                        <p>
-                                            📍
-                                            ${escapeHtml(
-                                                business.address ||
-                                                "Address unavailable"
-                                            )}
-                                        </p>
-
-                                        <p>
-                                            ${offerText}
-                                        </p>
-
-                                    </div>
-
-                                    <span>
-                                        →
-                                    </span>
-
-                                </div>
-
-                            </a>
-                        `;
-                    }
+                    business =>
+                        createBusinessCard(
+                            business
+                        )
                 )
                 .join("");
 
@@ -661,13 +674,10 @@ async function loadFollowingBusinesses() {
 
                 <div>
 
-                    <h3>
-                        Unable to load
-                    </h3>
+                    <h3>Unable to load</h3>
 
                     <p>
-                        Please login or refresh
-                        the page.
+                        Please refresh the page.
                     </p>
 
                 </div>
@@ -682,34 +692,59 @@ async function loadFollowingBusinesses() {
 // TAB MANAGEMENT
 // =========================================================
 
-function setActiveTab(tab) {
+function setActiveTab(
+    tab
+) {
 
-    nearbyTab.classList.remove("active");
-    followingTab.classList.remove("active");
-    offersTab.classList.remove("active");
+    nearbyTab.classList.remove(
+        "active"
+    );
+
+    followingTab.classList.remove(
+        "active"
+    );
+
+    offersTab.classList.remove(
+        "active"
+    );
 
 
-    if (tab === "nearby") {
+    if (
+        tab ===
+        "nearby"
+    ) {
 
-        nearbyTab.classList.add("active");
+        nearbyTab.classList.add(
+            "active"
+        );
 
         sectionTitle.textContent =
             "Nearby Businesses";
     }
 
 
-    if (tab === "following") {
+    if (
+        tab ===
+        "following"
+    ) {
 
-        followingTab.classList.add("active");
+        followingTab.classList.add(
+            "active"
+        );
 
         sectionTitle.textContent =
             "Following Businesses";
     }
 
 
-    if (tab === "offers") {
+    if (
+        tab ===
+        "offers"
+    ) {
 
-        offersTab.classList.add("active");
+        offersTab.classList.add(
+            "active"
+        );
 
         sectionTitle.textContent =
             "Latest Offers";
@@ -725,11 +760,24 @@ nearbyTab.addEventListener(
     "click",
     () => {
 
-        currentTab = "nearby";
+        currentTab =
+            "nearby";
 
-        setActiveTab("nearby");
+        setActiveTab(
+            "nearby"
+        );
 
-        loadNearbyBusinesses();
+        if (
+            userLatitude !== null &&
+            userLongitude !== null
+        ) {
+
+            fetchNearbyAgain();
+
+        } else {
+
+            loadNearbyBusinesses();
+        }
     }
 );
 
@@ -738,9 +786,12 @@ followingTab.addEventListener(
     "click",
     () => {
 
-        currentTab = "following";
+        currentTab =
+            "following";
 
-        setActiveTab("following");
+        setActiveTab(
+            "following"
+        );
 
         renderBusinesses();
     }
@@ -751,13 +802,58 @@ offersTab.addEventListener(
     "click",
     () => {
 
-        currentTab = "offers";
+        currentTab =
+            "offers";
 
-        setActiveTab("offers");
+        setActiveTab(
+            "offers"
+        );
 
         renderBusinesses();
     }
 );
+
+
+// =========================================================
+// FETCH NEARBY AGAIN
+// =========================================================
+
+async function fetchNearbyAgain() {
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/nearby?lat=${encodeURIComponent(
+                    userLatitude
+                )}&lng=${encodeURIComponent(
+                    userLongitude
+                )}`
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Unable to load nearby businesses"
+            );
+        }
+
+
+        allBusinesses =
+            await response.json();
+
+
+        renderBusinesses();
+
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+    }
+}
 
 
 // =========================================================
@@ -819,7 +915,8 @@ homeNav.addEventListener(
     "click",
     () => {
 
-        window.location.href = "/";
+        window.location.href =
+            "/";
     }
 );
 
@@ -838,26 +935,36 @@ profileNav.addEventListener(
 // CATEGORY ICON
 // =========================================================
 
-function getCategoryIcon(category) {
+function getCategoryIcon(
+    category
+) {
 
     const value =
-        String(category || "")
-            .toLowerCase();
+        String(
+            category || ""
+        ).toLowerCase();
 
 
-    if (value.includes("cafe")) {
+    if (
+        value.includes("cafe")
+    ) {
 
         return "☕";
     }
 
 
-    if (value.includes("restaurant")) {
+    if (
+        value.includes("restaurant")
+    ) {
 
         return "🍽️";
     }
 
 
-    if (value.includes("shop")) {
+    if (
+        value.includes("shop") ||
+        value.includes("store")
+    ) {
 
         return "🛍️";
     }
@@ -871,29 +978,33 @@ function getCategoryIcon(category) {
 // HTML ESCAPE
 // =========================================================
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
-    return String(value || "")
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+    return String(
+        value || ""
+    )
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
 }
 
 
