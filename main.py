@@ -352,7 +352,7 @@ def businesses():
 
 
 # =========================================================
-# GOOGLE PLACES SEARCH
+# GOOGLE PLACES NEARBY SEARCH
 # =========================================================
 
 def search_nearby_google_places(
@@ -361,16 +361,33 @@ def search_nearby_google_places(
     category
 ):
 
-    print("----------------------------------------")
-    print("GOOGLE PLACES SEARCH")
-    print("Category:", category)
-    print("Latitude:", latitude)
-    print("Longitude:", longitude)
+    print(
+        "----------------------------------------"
+    )
+
+    print(
+        "GOOGLE PLACES SEARCH"
+    )
+
+    print(
+        "Category:",
+        category
+    )
+
+    print(
+        "Latitude:",
+        latitude
+    )
+
+    print(
+        "Longitude:",
+        longitude
+    )
+
     print(
         "GOOGLE_PLACES_API_KEY EXISTS:",
         bool(GOOGLE_PLACES_API_KEY)
     )
-
 
     if not GOOGLE_PLACES_API_KEY:
 
@@ -380,12 +397,10 @@ def search_nearby_google_places(
 
         return []
 
-
     url = (
         "https://places.googleapis.com/v1/"
         "places:searchNearby"
     )
-
 
     headers = {
         "Content-Type": "application/json",
@@ -398,7 +413,6 @@ def search_nearby_google_places(
             "places.types"
         )
     }
-
 
     payload = {
 
@@ -418,14 +432,13 @@ def search_nearby_google_places(
 
                     "latitude": latitude,
                     "longitude": longitude
-
                 },
 
-                "radius": 5000.0
+                # 3 KM
+                "radius": 3000.0
             }
         }
     }
-
 
     try:
 
@@ -439,67 +452,37 @@ def search_nearby_google_places(
     except requests.RequestException as error:
 
         print(
-            "GOOGLE REQUEST EXCEPTION:",
+            "Google Places request error:",
             error
         )
 
         return []
 
-
     print(
-        "Google HTTP status:",
+        f"Google Places {category}:",
         response.status_code
     )
-
 
     if response.status_code != 200:
 
         print(
-            "GOOGLE API ERROR:"
-        )
-
-        print(
+            "Google Places response:",
             response.text
         )
 
         return []
 
-
-    try:
-
-        data = response.json()
-
-    except ValueError:
-
-        print(
-            "GOOGLE RESPONSE IS NOT VALID JSON"
-        )
-
-        print(
-            response.text
-        )
-
-        return []
-
+    data = response.json()
 
     places = data.get(
         "places",
         []
     )
 
-
     print(
-        "Google results:",
+        f"Google Places {category} results:",
         len(places)
     )
-
-
-    if not places:
-
-        print(
-            "Google returned ZERO businesses"
-        )
-
 
     return places
 
@@ -514,10 +497,13 @@ def nearby(
     lng: float | None = None
 ):
 
-    print("")
-    print("========================================")
-    print("NEARBY SEARCH START")
-    print("========================================")
+    print(
+        "========================================"
+    )
+
+    print(
+        "NEARBY SEARCH START"
+    )
 
     print(
         "GOOGLE_PLACES_API_KEY EXISTS:",
@@ -534,9 +520,8 @@ def nearby(
         lng
     )
 
-
     # -----------------------------------------------------
-    # VALIDATE LOCATION
+    # VALIDATE GPS
     # -----------------------------------------------------
 
     if lat is None or lng is None:
@@ -546,14 +531,12 @@ def nearby(
             detail="Latitude and longitude are required"
         )
 
-
     if not (-90 <= lat <= 90):
 
         raise HTTPException(
             status_code=400,
             detail="Invalid latitude"
         )
-
 
     if not (-180 <= lng <= 180):
 
@@ -562,9 +545,8 @@ def nearby(
             detail="Invalid longitude"
         )
 
-
     # -----------------------------------------------------
-    # GOOGLE CATEGORIES
+    # GOOGLE SEARCH
     # -----------------------------------------------------
 
     google_categories = [
@@ -573,15 +555,9 @@ def nearby(
         "store"
     ]
 
-
     google_businesses = []
 
     seen_places = set()
-
-
-    # -----------------------------------------------------
-    # SEARCH GOOGLE
-    # -----------------------------------------------------
 
     for google_category in google_categories:
 
@@ -591,42 +567,35 @@ def nearby(
             google_category
         )
 
-
         for place in places:
 
             place_id = place.get(
                 "id"
             )
 
-
             if place_id:
 
                 if place_id in seen_places:
-
                     continue
 
                 seen_places.add(
                     place_id
                 )
 
-
             google_businesses.append(
                 place
             )
-
 
     print(
         "TOTAL UNIQUE GOOGLE BUSINESSES:",
         len(google_businesses)
     )
 
-
     # -----------------------------------------------------
     # SAVE GOOGLE BUSINESSES
     # -----------------------------------------------------
 
     businesses_to_save = []
-
 
     for place in google_businesses:
 
@@ -635,49 +604,40 @@ def nearby(
             {}
         )
 
-
         name = display_name.get(
             "text",
             "Unknown Business"
         )
-
 
         address = place.get(
             "formattedAddress",
             ""
         )
 
-
         location = place.get(
             "location",
             {}
         )
 
-
         business_latitude = location.get(
             "latitude"
         )
 
-
         business_longitude = location.get(
             "longitude"
         )
-
 
         if (
             business_latitude is None
             or
             business_longitude is None
         ):
-
             continue
-
 
         types = place.get(
             "types",
             []
         )
-
 
         if "cafe" in types:
 
@@ -691,7 +651,6 @@ def nearby(
 
             category = "shop"
 
-
         businesses_to_save.append(
             (
                 name,
@@ -704,66 +663,39 @@ def nearby(
             )
         )
 
-
     added_count = 0
-
 
     if businesses_to_save:
 
-        try:
-
-            added_count = add_businesses(
-                businesses_to_save
-            )
-
-        except Exception as error:
-
-            print(
-                "DATABASE SAVE ERROR:",
-                error
-            )
-
+        added_count = add_businesses(
+            businesses_to_save
+        )
 
     print(
         "GOOGLE BUSINESSES ADDED:",
         added_count
     )
 
-
     # -----------------------------------------------------
-    # GET BUSINESSES FROM DATABASE
+    # GET BUSINESSES WITHIN 3 KM
     # -----------------------------------------------------
 
-    try:
-
-        nearby_data = get_nearby_businesses(
-            lat,
-            lng,
-            radius_km=5.0
-        )
-
-    except Exception as error:
-
-        print(
-            "DATABASE NEARBY ERROR:",
-            error
-        )
-
-        nearby_data = []
-
+    nearby_data = get_nearby_businesses(
+        lat,
+        lng,
+        radius_km=3.0
+    )
 
     print(
-        "DATABASE BUSINESSES WITHIN 5 KM:",
+        "DATABASE BUSINESSES WITHIN 3 KM:",
         len(nearby_data)
     )
 
-
     # -----------------------------------------------------
-    # BUILD RESPONSE
+    # RESPONSE
     # -----------------------------------------------------
 
     result = []
-
 
     for business, distance_km in nearby_data:
 
@@ -784,17 +716,22 @@ def nearby(
             }
         )
 
-
     print(
         "FINAL BUSINESSES RETURNED:",
         len(result)
     )
 
-    print("========================================")
-    print("NEARBY SEARCH END")
-    print("========================================")
-    print("")
+    print(
+        "========================================"
+    )
 
+    print(
+        "NEARBY SEARCH END"
+    )
+
+    print(
+        "========================================"
+    )
 
     return result
 
@@ -807,10 +744,6 @@ def nearby(
 def load_businesses():
 
     print(
-        "========================================"
-    )
-
-    print(
         "LOAD BUSINESSES"
     )
 
@@ -819,7 +752,6 @@ def load_businesses():
         bool(GOOGLE_PLACES_API_KEY)
     )
 
-
     if not GOOGLE_PLACES_API_KEY:
 
         raise HTTPException(
@@ -827,12 +759,10 @@ def load_businesses():
             detail="GOOGLE_PLACES_API_KEY is not configured"
         )
 
-
     url = (
         "https://places.googleapis.com/v1/"
         "places:searchText"
     )
-
 
     headers = {
         "Content-Type": "application/json",
@@ -843,7 +773,6 @@ def load_businesses():
             "places.location"
         )
     }
-
 
     searches = [
         (
@@ -860,17 +789,14 @@ def load_businesses():
         )
     ]
 
-
     total_found = 0
     total_added = 0
-
 
     for category, text_query in searches:
 
         data = {
             "textQuery": text_query
         }
-
 
         try:
 
@@ -890,45 +816,26 @@ def load_businesses():
 
             continue
 
-
-        print(
-            f"Google Text Search {category}:",
-            response.status_code
-        )
-
-
         if response.status_code != 200:
 
             print(
+                f"Google Places failed for {category}:",
+                response.status_code,
                 response.text
             )
 
             continue
 
-
-        try:
-
-            places = response.json().get(
-                "places",
-                []
-            )
-
-        except ValueError:
-
-            print(
-                "Invalid JSON from Google"
-            )
-
-            continue
-
+        places = response.json().get(
+            "places",
+            []
+        )
 
         total_found += len(
             places
         )
 
-
         businesses_to_save = []
-
 
         for place in places:
 
@@ -940,37 +847,30 @@ def load_businesses():
                 "Unknown"
             )
 
-
             address = place.get(
                 "formattedAddress",
                 ""
             )
-
 
             location = place.get(
                 "location",
                 {}
             )
 
-
             latitude = location.get(
                 "latitude"
             )
 
-
             longitude = location.get(
                 "longitude"
             )
-
 
             if (
                 latitude is None
                 or
                 longitude is None
             ):
-
                 continue
-
 
             businesses_to_save.append(
                 (
@@ -984,35 +884,13 @@ def load_businesses():
                 )
             )
 
-
         if businesses_to_save:
 
-            try:
+            added = add_businesses(
+                businesses_to_save
+            )
 
-                added = add_businesses(
-                    businesses_to_save
-                )
-
-                total_added += added
-
-            except Exception as error:
-
-                print(
-                    "Database error:",
-                    error
-                )
-
-
-    print(
-        "TOTAL FOUND:",
-        total_found
-    )
-
-    print(
-        "TOTAL ADDED:",
-        total_added
-    )
-
+            total_added += added
 
     return {
         "success": True,
@@ -1044,7 +922,6 @@ def follow_business(
             detail="Please login first"
         )
 
-
     try:
 
         user_id_int = int(user_id)
@@ -1056,10 +933,8 @@ def follow_business(
             detail="Invalid session"
         )
 
-
     conn = get_connection()
     cursor = conn.cursor()
-
 
     cursor.execute(
         """
@@ -1074,9 +949,7 @@ def follow_business(
         )
     )
 
-
     existing = cursor.fetchone()
-
 
     if existing:
 
@@ -1110,10 +983,8 @@ def follow_business(
 
         following = True
 
-
     conn.commit()
     conn.close()
-
 
     return {
         "success": True,
@@ -1139,7 +1010,6 @@ def check_following(
             "following": False
         }
 
-
     try:
 
         user_id_int = int(user_id)
@@ -1149,7 +1019,6 @@ def check_following(
         return {
             "following": False
         }
-
 
     return {
         "following": is_following(
@@ -1173,10 +1042,8 @@ def update_offer(
 
     offer = offer.strip()
 
-
     conn = get_connection()
     cursor = conn.cursor()
-
 
     cursor.execute(
         """
@@ -1187,9 +1054,7 @@ def update_offer(
         (business_id,)
     )
 
-
     business = cursor.fetchone()
-
 
     if not business:
 
@@ -1199,7 +1064,6 @@ def update_offer(
             status_code=404,
             detail="Business not found"
         )
-
 
     cursor.execute(
         """
@@ -1213,10 +1077,8 @@ def update_offer(
         )
     )
 
-
     conn.commit()
     conn.close()
-
 
     return {
         "success": True,
@@ -1238,7 +1100,6 @@ def following(
 
         return []
 
-
     try:
 
         user_id_int = int(user_id)
@@ -1247,11 +1108,9 @@ def following(
 
         return []
 
-
     data = get_followed_businesses(
         user_id_int
     )
-
 
     return [
         {
