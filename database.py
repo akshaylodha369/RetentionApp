@@ -1,4 +1,6 @@
 import sqlite3
+import math
+
 
 DB_NAME = "retention.db"
 
@@ -8,7 +10,10 @@ DB_NAME = "retention.db"
 # =========================================================
 
 def get_connection():
-    return sqlite3.connect(DB_NAME)
+
+    conn = sqlite3.connect(DB_NAME)
+
+    return conn
 
 
 # =========================================================
@@ -110,13 +115,25 @@ def add_businesses(businesses):
 
     for business in businesses:
 
+        if len(business) < 7:
+            continue
+
+        name = business[0]
+        category = business[1]
+        latitude = business[2]
+        longitude = business[3]
+        address = business[4]
+        offer = business[5]
+        owner_id = business[6]
+
         cursor.execute("""
             SELECT id
             FROM businesses
-            WHERE name = ? AND address = ?
+            WHERE name = ?
+            AND address = ?
         """, (
-            business[0],
-            business[4]
+            name,
+            address
         ))
 
         existing = cursor.fetchone()
@@ -136,7 +153,15 @@ def add_businesses(businesses):
                 owner_id
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, business)
+        """, (
+            name,
+            category,
+            latitude,
+            longitude,
+            address,
+            offer,
+            owner_id
+        ))
 
         added += 1
 
@@ -147,10 +172,126 @@ def add_businesses(businesses):
 
 
 # =========================================================
+# HAVERSINE DISTANCE
+# =========================================================
+
+def calculate_distance_km(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+):
+
+    earth_radius_km = 6371.0
+
+    lat1_rad = math.radians(float(lat1))
+    lat2_rad = math.radians(float(lat2))
+
+    delta_lat = math.radians(
+        float(lat2) - float(lat1)
+    )
+
+    delta_lon = math.radians(
+        float(lon2) - float(lon1)
+    )
+
+    a = (
+        math.sin(delta_lat / 2) ** 2
+        +
+        math.cos(lat1_rad)
+        *
+        math.cos(lat2_rad)
+        *
+        math.sin(delta_lon / 2) ** 2
+    )
+
+    c = 2 * math.atan2(
+        math.sqrt(a),
+        math.sqrt(1 - a)
+    )
+
+    return earth_radius_km * c
+
+
+# =========================================================
+# GET NEARBY BUSINESSES
+# =========================================================
+
+def get_nearby_businesses(
+    latitude,
+    longitude,
+    radius_km=5.0
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            name,
+            category,
+            latitude,
+            longitude,
+            address,
+            offer,
+            owner_id
+        FROM businesses
+        WHERE latitude IS NOT NULL
+        AND longitude IS NOT NULL
+    """)
+
+    businesses = cursor.fetchall()
+
+    conn.close()
+
+    nearby = []
+
+    for business in businesses:
+
+        business_latitude = business[3]
+        business_longitude = business[4]
+
+        try:
+
+            distance_km = calculate_distance_km(
+                latitude,
+                longitude,
+                business_latitude,
+                business_longitude
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            continue
+
+        if distance_km <= radius_km:
+
+            nearby.append(
+                (
+                    business,
+                    distance_km
+                )
+            )
+
+    nearby.sort(
+        key=lambda item: item[1]
+    )
+
+    return nearby
+
+
+# =========================================================
 # FOLLOW BUSINESS
 # =========================================================
 
-def follow_business(user_id, business_id):
+def follow_business(
+    user_id,
+    business_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -175,7 +316,10 @@ def follow_business(user_id, business_id):
 # UNFOLLOW BUSINESS
 # =========================================================
 
-def unfollow_business(user_id, business_id):
+def unfollow_business(
+    user_id,
+    business_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -197,7 +341,10 @@ def unfollow_business(user_id, business_id):
 # CHECK FOLLOW STATUS
 # =========================================================
 
-def is_following(user_id, business_id):
+def is_following(
+    user_id,
+    business_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -223,7 +370,9 @@ def is_following(user_id, business_id):
 # GET FOLLOWED BUSINESSES
 # =========================================================
 
-def get_followed_businesses(user_id):
+def get_followed_businesses(
+    user_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -254,14 +403,12 @@ def get_followed_businesses(user_id):
 
 
 # =========================================================
-# USER FUNCTIONS
-# =========================================================
-
-# =========================================================
 # GET USER BY EMAIL
 # =========================================================
 
-def get_user_by_email(email):
+def get_user_by_email(
+    email
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -290,7 +437,9 @@ def get_user_by_email(email):
 # GET USER BY ID
 # =========================================================
 
-def get_user_by_id(user_id):
+def get_user_by_id(
+    user_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -313,10 +462,6 @@ def get_user_by_id(user_id):
 
     return user
 
-
-# =========================================================
-# OWNER FUNCTIONS
-# =========================================================
 
 # =========================================================
 # CREATE OWNER
@@ -358,7 +503,9 @@ def create_owner(
 # GET OWNER BUSINESSES
 # =========================================================
 
-def get_owner_businesses(owner_id):
+def get_owner_businesses(
+    owner_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -390,7 +537,9 @@ def get_owner_businesses(owner_id):
 # GET BUSINESS BY ID
 # =========================================================
 
-def get_business_by_id(business_id):
+def get_business_by_id(
+    business_id
+):
 
     conn = get_connection()
     cursor = conn.cursor()
