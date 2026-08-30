@@ -1,3 +1,4 @@
+
 // =========================================================
 // RETENTION APP - static/app.js
 // =========================================================
@@ -12,9 +13,6 @@ let allBusinesses = [];
 let currentTab = "nearby";
 let currentCategory = "all";
 let searchText = "";
-
-let userLatitude = null;
-let userLongitude = null;
 
 
 // =========================================================
@@ -50,174 +48,25 @@ const profileNav =
 
 
 // =========================================================
-// LOAD NEARBY BUSINESSES
+// LOAD BUSINESSES
 // =========================================================
 
-async function loadNearbyBusinesses() {
+async function loadBusinesses() {
 
     sectionTitle.textContent =
-        "Finding Nearby Businesses...";
+        "Nearby Businesses";
 
     businessList.innerHTML = `
         <div class="business-card">
             <div>
-                <h3>📍 Finding businesses near you...</h3>
+                <h3>🏪 Loading businesses...</h3>
                 <p>
-                    Please allow location access.
+                    Please wait.
                 </p>
             </div>
         </div>
     `;
 
-
-    if (!navigator.geolocation) {
-
-        businessList.innerHTML = `
-            <div class="business-card">
-                <div>
-                    <h3>Location unavailable</h3>
-                    <p>
-                        Your browser does not support location.
-                    </p>
-                </div>
-            </div>
-        `;
-
-        return;
-    }
-
-
-    navigator.geolocation.getCurrentPosition(
-
-        async function(position) {
-
-            userLatitude =
-                position.coords.latitude;
-
-            userLongitude =
-                position.coords.longitude;
-
-
-            console.log(
-                "User location:",
-                userLatitude,
-                userLongitude
-            );
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        `/api/nearby?lat=${encodeURIComponent(
-                            userLatitude
-                        )}&lng=${encodeURIComponent(
-                            userLongitude
-                        )}`
-                    );
-
-
-                if (!response.ok) {
-
-                    const errorData =
-                        await response.json()
-                            .catch(() => ({}));
-
-                    throw new Error(
-                        errorData.detail ||
-                        "Failed to load nearby businesses"
-                    );
-                }
-
-
-                allBusinesses =
-                    await response.json();
-
-
-                sectionTitle.textContent =
-                    "Nearby Businesses";
-
-
-                renderBusinesses();
-
-
-            } catch (error) {
-
-                console.error(
-                    "Nearby error:",
-                    error
-                );
-
-
-                businessList.innerHTML = `
-                    <div class="business-card">
-                        <div>
-                            <h3>Unable to load businesses</h3>
-                            <p>
-                                ${escapeHtml(
-                                    error.message
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                `;
-            }
-        },
-
-
-        function(error) {
-
-            console.error(
-                "Location error:",
-                error
-            );
-
-
-            let message =
-                "Location permission is required to find nearby businesses.";
-
-
-            if (
-                error.code ===
-                error.PERMISSION_DENIED
-            ) {
-
-                message =
-                    "Please allow location access in your browser and refresh the page.";
-            }
-
-
-            businessList.innerHTML = `
-                <div class="business-card">
-                    <div>
-                        <h3>📍 Location required</h3>
-                        <p>
-                            ${escapeHtml(message)}
-                        </p>
-                    </div>
-                </div>
-            `;
-
-
-            sectionTitle.textContent =
-                "Nearby Businesses";
-        },
-
-
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
-        }
-    );
-}
-
-
-// =========================================================
-// LOAD ALL BUSINESSES
-// =========================================================
-
-async function loadBusinesses() {
 
     try {
 
@@ -237,18 +86,32 @@ async function loadBusinesses() {
             await response.json();
 
 
+        console.log(
+            "Businesses loaded:",
+            allBusinesses
+        );
+
+
         renderBusinesses();
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Business loading error:",
+            error
+        );
 
 
         businessList.innerHTML = `
-            <p>
-                ❌ Unable to load businesses.
-            </p>
+            <div class="business-card">
+                <div>
+                    <h3>Unable to load businesses</h3>
+                    <p>
+                        Please refresh the page.
+                    </p>
+                </div>
+            </div>
         `;
     }
 }
@@ -267,8 +130,7 @@ function getFilteredBusinesses() {
     // CATEGORY FILTER
 
     if (
-        currentCategory !==
-        "all"
+        currentCategory !== "all"
     ) {
 
         businesses =
@@ -341,8 +203,7 @@ function getFilteredBusinesses() {
 function renderBusinesses() {
 
     if (
-        currentTab ===
-        "following"
+        currentTab === "following"
     ) {
 
         loadFollowingBusinesses();
@@ -355,9 +216,10 @@ function renderBusinesses() {
         getFilteredBusinesses();
 
 
+    // OFFERS TAB
+
     if (
-        currentTab ===
-        "offers"
+        currentTab === "offers"
     ) {
 
         businesses =
@@ -422,34 +284,6 @@ function createBusinessCard(
             : "No active offer";
 
 
-    let distanceText = "";
-
-
-    if (
-        typeof business.distance_km ===
-        "number"
-    ) {
-
-        if (
-            business.distance_km <
-            1
-        ) {
-
-            distanceText =
-                `${Math.round(
-                    business.distance_km * 1000
-                )} m away`;
-
-        } else {
-
-            distanceText =
-                `${business.distance_km.toFixed(
-                    1
-                )} km away`;
-        }
-    }
-
-
     return `
         <a
             href="/static/business.html?id=${business.id}"
@@ -480,17 +314,6 @@ function createBusinessCard(
                             "Address unavailable"
                         )}
                     </p>
-
-                    ${
-                        distanceText
-                            ? `
-                                <p>
-                                    📏
-                                    ${distanceText}
-                                </p>
-                            `
-                            : ""
-                    }
 
                     <p>
                         ${offerText}
@@ -525,32 +348,6 @@ async function loadFollowingBusinesses() {
             await fetch(
                 "/api/following"
             );
-
-
-        if (
-            response.status ===
-            401
-        ) {
-
-            businessList.innerHTML = `
-                <div class="business-card">
-
-                    <div>
-
-                        <h3>Login required</h3>
-
-                        <p>
-                            Please login to see
-                            businesses you follow.
-                        </p>
-
-                    </div>
-
-                </div>
-            `;
-
-            return;
-        }
 
 
         if (!response.ok) {
@@ -612,8 +409,7 @@ async function loadFollowingBusinesses() {
         // CATEGORY
 
         if (
-            currentCategory !==
-            "all"
+            currentCategory !== "all"
         ) {
 
             businesses =
@@ -634,18 +430,13 @@ async function loadFollowingBusinesses() {
 
             businessList.innerHTML = `
                 <div class="business-card">
-
                     <div>
-
                         <h3>No businesses found</h3>
-
                         <p>
                             You are not following any
                             matching businesses.
                         </p>
-
                     </div>
-
                 </div>
             `;
 
@@ -666,22 +457,20 @@ async function loadFollowingBusinesses() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Following error:",
+            error
+        );
 
 
         businessList.innerHTML = `
             <div class="business-card">
-
                 <div>
-
                     <h3>Unable to load</h3>
-
                     <p>
-                        Please refresh the page.
+                        Please login or refresh the page.
                     </p>
-
                 </div>
-
             </div>
         `;
     }
@@ -710,8 +499,7 @@ function setActiveTab(
 
 
     if (
-        tab ===
-        "nearby"
+        tab === "nearby"
     ) {
 
         nearbyTab.classList.add(
@@ -724,8 +512,7 @@ function setActiveTab(
 
 
     if (
-        tab ===
-        "following"
+        tab === "following"
     ) {
 
         followingTab.classList.add(
@@ -738,8 +525,7 @@ function setActiveTab(
 
 
     if (
-        tab ===
-        "offers"
+        tab === "offers"
     ) {
 
         offersTab.classList.add(
@@ -767,17 +553,7 @@ nearbyTab.addEventListener(
             "nearby"
         );
 
-        if (
-            userLatitude !== null &&
-            userLongitude !== null
-        ) {
-
-            fetchNearbyAgain();
-
-        } else {
-
-            loadNearbyBusinesses();
-        }
+        renderBusinesses();
     }
 );
 
@@ -812,48 +588,6 @@ offersTab.addEventListener(
         renderBusinesses();
     }
 );
-
-
-// =========================================================
-// FETCH NEARBY AGAIN
-// =========================================================
-
-async function fetchNearbyAgain() {
-
-    try {
-
-        const response =
-            await fetch(
-                `/api/nearby?lat=${encodeURIComponent(
-                    userLatitude
-                )}&lng=${encodeURIComponent(
-                    userLongitude
-                )}`
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Unable to load nearby businesses"
-            );
-        }
-
-
-        allBusinesses =
-            await response.json();
-
-
-        renderBusinesses();
-
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-    }
-}
 
 
 // =========================================================
@@ -1012,4 +746,4 @@ function escapeHtml(
 // INITIAL LOAD
 // =========================================================
 
-loadNearbyBusinesses();
+loadBusinesses();
