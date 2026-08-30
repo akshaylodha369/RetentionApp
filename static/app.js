@@ -48,31 +48,27 @@ const profileNav =
 
 
 // =========================================================
-// LOAD BUSINESSES
+// LOAD SAVED BUSINESSES
 // =========================================================
 
 async function loadBusinesses() {
 
     sectionTitle.textContent =
-        "Nearby Businesses";
+        "Businesses";
 
     businessList.innerHTML = `
         <div class="business-card">
             <div>
-                <h3>🏪 Loading businesses...</h3>
-                <p>
-                    Please wait.
-                </p>
+                <h3>Loading businesses...</h3>
+                <p>Please wait.</p>
             </div>
         </div>
     `;
-
 
     try {
 
         const response =
             await fetch("/api/businesses");
-
 
         if (!response.ok) {
 
@@ -81,19 +77,15 @@ async function loadBusinesses() {
             );
         }
 
-
         allBusinesses =
             await response.json();
 
-
         console.log(
-            "Businesses loaded:",
+            "Saved businesses:",
             allBusinesses
         );
 
-
         renderBusinesses();
-
 
     } catch (error) {
 
@@ -101,7 +93,6 @@ async function loadBusinesses() {
             "Business loading error:",
             error
         );
-
 
         businessList.innerHTML = `
             <div class="business-card">
@@ -159,7 +150,6 @@ function getFilteredBusinesses() {
                 .trim()
                 .toLowerCase();
 
-
         businesses =
             businesses.filter(
                 business => {
@@ -169,18 +159,15 @@ function getFilteredBusinesses() {
                             business.name || ""
                         ).toLowerCase();
 
-
                     const category =
                         String(
                             business.category || ""
                         ).toLowerCase();
 
-
                     const address =
                         String(
                             business.address || ""
                         ).toLowerCase();
-
 
                     return (
                         name.includes(query) ||
@@ -201,6 +188,8 @@ function getFilteredBusinesses() {
 // =========================================================
 
 function renderBusinesses() {
+
+    // FOLLOWING TAB
 
     if (
         currentTab === "following"
@@ -233,7 +222,11 @@ function renderBusinesses() {
     }
 
 
-    if (!businesses.length) {
+    // NO RESULTS
+
+    if (
+        !businesses.length
+    ) {
 
         businessList.innerHTML = `
             <div class="business-card">
@@ -249,6 +242,8 @@ function renderBusinesses() {
         return;
     }
 
+
+    // RENDER
 
     businessList.innerHTML =
         businesses
@@ -350,6 +345,27 @@ async function loadFollowingBusinesses() {
             );
 
 
+        if (
+            response.status === 401
+        ) {
+
+            businessList.innerHTML = `
+                <div class="business-card">
+                    <div>
+                        <h3>Login required</h3>
+
+                        <p>
+                            Please login to see
+                            businesses you follow.
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            return;
+        }
+
+
         if (!response.ok) {
 
             throw new Error(
@@ -426,12 +442,15 @@ async function loadFollowingBusinesses() {
         }
 
 
-        if (!businesses.length) {
+        if (
+            !businesses.length
+        ) {
 
             businessList.innerHTML = `
                 <div class="business-card">
                     <div>
                         <h3>No businesses found</h3>
+
                         <p>
                             You are not following any
                             matching businesses.
@@ -467,8 +486,9 @@ async function loadFollowingBusinesses() {
             <div class="business-card">
                 <div>
                     <h3>Unable to load</h3>
+
                     <p>
-                        Please login or refresh the page.
+                        Please refresh the page.
                     </p>
                 </div>
             </div>
@@ -507,7 +527,7 @@ function setActiveTab(
         );
 
         sectionTitle.textContent =
-            "Nearby Businesses";
+            "Businesses";
     }
 
 
@@ -745,5 +765,8 @@ function escapeHtml(
 // =========================================================
 // INITIAL LOAD
 // =========================================================
+
+// No GPS.
+// Load businesses already saved in database.
 
 loadBusinesses();
