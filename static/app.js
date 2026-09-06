@@ -1,365 +1,314 @@
-
-// =========================================================
-// RETENTION APP - static/app.js
-// =========================================================
-
-
-// =========================================================
-// STATE
-// =========================================================
-
 let allBusinesses = [];
-
 let currentTab = "nearby";
 let currentCategory = "all";
 let searchText = "";
+let nearbyLoaded = false;
 
 
-// =========================================================
+// =========================
 // ELEMENTS
-// =========================================================
+// =========================
 
-const searchInput =
-    document.getElementById("searchInput");
+const searchInput = document.getElementById("searchInput");
+const businessList = document.getElementById("businessList");
+const sectionTitle = document.getElementById("sectionTitle");
 
-const businessList =
-    document.getElementById("businessList");
+const nearbyTab = document.getElementById("nearbyTab");
+const followingTab = document.getElementById("followingTab");
+const offersTab = document.getElementById("offersTab");
 
-const sectionTitle =
-    document.getElementById("sectionTitle");
+const filterButtons = document.querySelectorAll(".filter-btn");
 
-const nearbyTab =
-    document.getElementById("nearbyTab");
-
-const followingTab =
-    document.getElementById("followingTab");
-
-const offersTab =
-    document.getElementById("offersTab");
-
-const filterButtons =
-    document.querySelectorAll(".filter-btn");
-
-const homeNav =
-    document.getElementById("homeNav");
-
-const profileNav =
-    document.getElementById("profileNav");
+const homeNav = document.getElementById("homeNav");
+const profileNav = document.getElementById("profileNav");
 
 
-// =========================================================
-// LOAD SAVED BUSINESSES
-// =========================================================
+// =========================
+// LOAD NEARBY BUSINESSES
+// =========================
 
-async function loadBusinesses() {
+function loadNearbyBusinesses() {
 
-    sectionTitle.textContent =
-        "Businesses";
+    businessList.innerHTML = "<p>Finding businesses near you...</p>";
 
-    businessList.innerHTML = `
-        <div class="business-card">
-            <div>
-                <h3>Loading businesses...</h3>
-                <p>Please wait.</p>
-            </div>
-        </div>
-    `;
+    if (!navigator.geolocation) {
+        businessList.innerHTML =
+            "<p>Location is not supported by your browser.</p>";
+        return;
+    }
 
-    try {
+    navigator.geolocation.getCurrentPosition(
 
-        const response =
-            await fetch("/api/businesses");
+        async function(position) {
 
-        if (!response.ok) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
 
-            throw new Error(
-                "Failed to load businesses"
-            );
+            try {
+
+                const response = await fetch(
+                    `/api/nearby?lat=${lat}&lng=${lng}`
+                );
+
+                if (!response.ok) {
+                    throw new Error("Failed to load nearby businesses");
+                }
+
+                allBusinesses = await response.json();
+
+                nearbyLoaded = true;
+
+                renderBusinesses();
+
+            } catch (error) {
+
+                console.error(error);
+
+                businessList.innerHTML =
+                    "<p>Could not load nearby businesses.</p>";
+            }
+        },
+
+        function(error) {
+
+            console.error(error);
+
+            if (error.code === 1) {
+
+                businessList.innerHTML =
+                    "<p>Please allow location access to find nearby businesses.</p>";
+
+            } else {
+
+                businessList.innerHTML =
+                    "<p>Unable to get your location.</p>";
+            }
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+    );
+}
+
+
+// =========================
+// FILTER BUSINESSES
+// =========================
+
+function getFilteredBusinesses(businesses) {
+
+    return businesses.filter(function(business) {
+
+        // CATEGORY
+        if (currentCategory !== "all") {
+
+            const category =
+                (business.category || "").toLowerCase();
+
+            if (currentCategory === "shop") {
+
+                if (
+                    !category.includes("shop") &&
+                    !category.includes("store")
+                ) {
+                    return false;
+                }
+
+            } else {
+
+                if (!category.includes(currentCategory)) {
+                    return false;
+                }
+            }
         }
 
-        allBusinesses =
-            await response.json();
 
-        console.log(
-            "Saved businesses:",
-            allBusinesses
-        );
+        // SEARCH
+        if (searchText.trim() !== "") {
 
-        renderBusinesses();
+            const search =
+                searchText.toLowerCase().trim();
 
-    } catch (error) {
+            const name =
+                (business.name || "").toLowerCase();
 
-        console.error(
-            "Business loading error:",
-            error
-        );
+            const category =
+                (business.category || "").toLowerCase();
 
-        businessList.innerHTML = `
-            <div class="business-card">
-                <div>
-                    <h3>Unable to load businesses</h3>
-                    <p>
-                        Please refresh the page.
-                    </p>
-                </div>
-            </div>
-        `;
-    }
+            const address =
+                (business.address || "").toLowerCase();
+
+            if (
+                !name.includes(search) &&
+                !category.includes(search) &&
+                !address.includes(search)
+            ) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 }
 
 
-// =========================================================
-// FILTER BUSINESSES
-// =========================================================
-
-function getFilteredBusinesses() {
-
-    let businesses =
-        [...allBusinesses];
-
-
-    // CATEGORY FILTER
-
-    if (
-        currentCategory !== "all"
-    ) {
-
-        businesses =
-            businesses.filter(
-                business =>
-
-                    String(
-                        business.category || ""
-                    )
-                    .toLowerCase()
-                    .includes(
-                        currentCategory.toLowerCase()
-                    )
-            );
-    }
-
-
-    // SEARCH FILTER
-
-    if (
-        searchText.trim()
-    ) {
-
-        const query =
-            searchText
-                .trim()
-                .toLowerCase();
-
-        businesses =
-            businesses.filter(
-                business => {
-
-                    const name =
-                        String(
-                            business.name || ""
-                        ).toLowerCase();
-
-                    const category =
-                        String(
-                            business.category || ""
-                        ).toLowerCase();
-
-                    const address =
-                        String(
-                            business.address || ""
-                        ).toLowerCase();
-
-                    return (
-                        name.includes(query) ||
-                        category.includes(query) ||
-                        address.includes(query)
-                    );
-                }
-            );
-    }
-
-
-    return businesses;
-}
-
-
-// =========================================================
+// =========================
 // RENDER BUSINESSES
-// =========================================================
+// =========================
 
-function renderBusinesses() {
+async function renderBusinesses() {
 
-    // FOLLOWING TAB
+    if (currentTab === "following") {
 
-    if (
-        currentTab === "following"
-    ) {
-
-        loadFollowingBusinesses();
-
+        await loadFollowingBusinesses();
         return;
     }
 
 
-    let businesses =
-        getFilteredBusinesses();
+    if (currentTab === "offers") {
 
-
-    // OFFERS TAB
-
-    if (
-        currentTab === "offers"
-    ) {
-
-        businesses =
-            businesses.filter(
-                business =>
-                    business.offer &&
-                    String(
-                        business.offer
-                    ).trim() !== ""
-            );
-    }
-
-
-    // NO RESULTS
-
-    if (
-        !businesses.length
-    ) {
-
-        businessList.innerHTML = `
-            <div class="business-card">
-                <div>
-                    <h3>No businesses found</h3>
-                    <p>
-                        Try another search or category.
-                    </p>
-                </div>
-            </div>
-        `;
-
+        await loadOffers();
         return;
     }
 
 
-    // RENDER
+    const filtered =
+        getFilteredBusinesses(allBusinesses);
+
+
+    if (filtered.length === 0) {
+
+        businessList.innerHTML =
+            "<p>No businesses found.</p>";
+
+        return;
+    }
+
 
     businessList.innerHTML =
-        businesses
-            .map(
-                business =>
-                    createBusinessCard(
-                        business
-                    )
-            )
-            .join("");
+        filtered.map(createBusinessCard).join("");
 }
 
 
-// =========================================================
+// =========================
 // BUSINESS CARD
-// =========================================================
+// =========================
 
-function createBusinessCard(
-    business
-) {
+function createBusinessCard(business) {
 
-    const icon =
-        getCategoryIcon(
-            business.category
+    const name =
+        escapeHtml(business.name || "Unnamed Business");
+
+    const category =
+        escapeHtml(business.category || "");
+
+    const address =
+        escapeHtml(
+            business.address || "Address unavailable"
         );
 
+    const offer =
+        escapeHtml(business.offer || "");
 
-    const offerText =
-        business.offer
-            ? `🎟️ ${escapeHtml(
-                business.offer
-            )}`
-            : "No active offer";
+
+    let distanceHTML = "";
+
+
+    if (
+        business.distance_km !== undefined &&
+        business.distance_km !== null
+    ) {
+
+        const distance =
+            Number(business.distance_km);
+
+        if (!isNaN(distance)) {
+
+            distanceHTML = `
+                <p class="business-distance">
+                    📍 ${distance.toFixed(2)} km away
+                </p>
+            `;
+        }
+    }
 
 
     return `
-        <a
-            href="/static/business.html?id=${business.id}"
-            class="business-link"
+        <div
+            class="business-card"
+            onclick="openBusiness(${business.id})"
         >
 
-            <div class="business-card">
+            <div class="business-icon">
+                ${getCategoryIcon(business.category)}
+            </div>
 
-                <div>
+            <div class="business-info">
 
-                    <h3>
-                        ${icon}
-                        ${escapeHtml(
-                            business.name
-                        )}
-                    </h3>
+                <h3>${name}</h3>
 
-                    <p>
-                        ${escapeHtml(
-                            business.category || ""
-                        )}
-                    </p>
+                <p class="business-category">
+                    ${category}
+                </p>
 
-                    <p>
-                        📍
-                        ${escapeHtml(
-                            business.address ||
-                            "Address unavailable"
-                        )}
-                    </p>
+                <p class="business-address">
+                    📍 ${address}
+                </p>
 
-                    <p>
-                        ${offerText}
-                    </p>
+                ${distanceHTML}
 
-                </div>
-
-                <span>
-                    →
-                </span>
+                ${
+                    offer
+                        ? `
+                            <div class="business-offer">
+                                🎟️ ${offer}
+                            </div>
+                        `
+                        : ""
+                }
 
             </div>
 
-        </a>
+        </div>
     `;
 }
 
 
-// =========================================================
-// FOLLOWING BUSINESSES
-// =========================================================
+// =========================
+// OPEN BUSINESS
+// =========================
+
+function openBusiness(id) {
+
+    window.location.href =
+        `/static/business.html?id=${id}`;
+}
+
+
+// =========================
+// FOLLOWING
+// =========================
 
 async function loadFollowingBusinesses() {
 
     sectionTitle.textContent =
         "Following Businesses";
 
-
     try {
 
         const response =
-            await fetch(
-                "/api/following"
-            );
+            await fetch("/api/following");
 
 
-        if (
-            response.status === 401
-        ) {
+        if (response.status === 401) {
 
             businessList.innerHTML = `
-                <div class="business-card">
-                    <div>
-                        <h3>Login required</h3>
-
-                        <p>
-                            Please login to see
-                            businesses you follow.
-                        </p>
-                    </div>
-                </div>
+                <p>
+                    Please login to see businesses you follow.
+                </p>
             `;
 
             return;
@@ -367,350 +316,217 @@ async function loadFollowingBusinesses() {
 
 
         if (!response.ok) {
-
             throw new Error(
                 "Failed to load following businesses"
             );
         }
 
 
-        let businesses =
+        const businesses =
             await response.json();
 
 
-        // SEARCH
-
-        if (
-            searchText.trim()
-        ) {
-
-            const query =
-                searchText
-                    .trim()
-                    .toLowerCase();
+        const filtered =
+            getFilteredBusinesses(businesses);
 
 
-            businesses =
-                businesses.filter(
-                    business => {
+        if (filtered.length === 0) {
 
-                        const name =
-                            String(
-                                business.name || ""
-                            ).toLowerCase();
-
-
-                        const category =
-                            String(
-                                business.category || ""
-                            ).toLowerCase();
-
-
-                        const address =
-                            String(
-                                business.address || ""
-                            ).toLowerCase();
-
-
-                        return (
-                            name.includes(query) ||
-                            category.includes(query) ||
-                            address.includes(query)
-                        );
-                    }
-                );
-        }
-
-
-        // CATEGORY
-
-        if (
-            currentCategory !== "all"
-        ) {
-
-            businesses =
-                businesses.filter(
-                    business =>
-                        String(
-                            business.category || ""
-                        )
-                        .toLowerCase()
-                        .includes(
-                            currentCategory.toLowerCase()
-                        )
-                );
-        }
-
-
-        if (
-            !businesses.length
-        ) {
-
-            businessList.innerHTML = `
-                <div class="business-card">
-                    <div>
-                        <h3>No businesses found</h3>
-
-                        <p>
-                            You are not following any
-                            matching businesses.
-                        </p>
-                    </div>
-                </div>
-            `;
+            businessList.innerHTML =
+                "<p>You are not following any businesses yet.</p>";
 
             return;
         }
 
 
         businessList.innerHTML =
-            businesses
-                .map(
-                    business =>
-                        createBusinessCard(
-                            business
-                        )
-                )
-                .join("");
-
+            filtered.map(createBusinessCard).join("");
 
     } catch (error) {
 
-        console.error(
-            "Following error:",
-            error
-        );
+        console.error(error);
 
-
-        businessList.innerHTML = `
-            <div class="business-card">
-                <div>
-                    <h3>Unable to load</h3>
-
-                    <p>
-                        Please refresh the page.
-                    </p>
-                </div>
-            </div>
-        `;
+        businessList.innerHTML =
+            "<p>Could not load following businesses.</p>";
     }
 }
 
 
-// =========================================================
-// TAB MANAGEMENT
-// =========================================================
+// =========================
+// OFFERS
+// =========================
 
-function setActiveTab(
-    tab
-) {
+async function loadOffers() {
 
-    nearbyTab.classList.remove(
-        "active"
-    );
-
-    followingTab.classList.remove(
-        "active"
-    );
-
-    offersTab.classList.remove(
-        "active"
-    );
+    sectionTitle.textContent =
+        "Latest Offers";
 
 
-    if (
-        tab === "nearby"
-    ) {
+    const businessesWithOffers =
+        allBusinesses.filter(function(business) {
 
-        nearbyTab.classList.add(
-            "active"
-        );
+            return (
+                business.offer &&
+                business.offer.trim() !== ""
+            );
+        });
 
-        sectionTitle.textContent =
-            "Businesses";
+
+    const filtered =
+        getFilteredBusinesses(businessesWithOffers);
+
+
+    if (filtered.length === 0) {
+
+        businessList.innerHTML =
+            "<p>No offers available.</p>";
+
+        return;
     }
 
 
-    if (
-        tab === "following"
-    ) {
+    businessList.innerHTML =
+        filtered.map(createBusinessCard).join("");
+}
 
-        followingTab.classList.add(
-            "active"
-        );
+
+// =========================
+// TAB SWITCHING
+// =========================
+
+function setActiveTab(tab) {
+
+    currentTab = tab;
+
+
+    // Remove active from all tabs
+
+    nearbyTab.classList.remove("active");
+    followingTab.classList.remove("active");
+    offersTab.classList.remove("active");
+
+
+    // Nearby
+
+    if (tab === "nearby") {
+
+        nearbyTab.classList.add("active");
+
+        sectionTitle.textContent =
+            "Nearby Businesses";
+
+
+        if (!nearbyLoaded) {
+
+            loadNearbyBusinesses();
+
+        } else {
+
+            renderBusinesses();
+        }
+
+        return;
+    }
+
+
+    // Following
+
+    if (tab === "following") {
+
+        followingTab.classList.add("active");
 
         sectionTitle.textContent =
             "Following Businesses";
+
+        renderBusinesses();
+
+        return;
     }
 
 
-    if (
-        tab === "offers"
-    ) {
+    // Offers
 
-        offersTab.classList.add(
-            "active"
-        );
+    if (tab === "offers") {
+
+        offersTab.classList.add("active");
 
         sectionTitle.textContent =
             "Latest Offers";
+
+        renderBusinesses();
+
+        return;
     }
 }
 
 
-// =========================================================
-// TAB EVENTS
-// =========================================================
+// =========================
+// CATEGORY FILTER
+// =========================
 
-nearbyTab.addEventListener(
-    "click",
-    () => {
+function setCategory(category) {
 
-        currentTab =
-            "nearby";
+    currentCategory = category;
 
-        setActiveTab(
-            "nearby"
+
+    filterButtons.forEach(function(button) {
+
+        button.classList.remove("active");
+
+    });
+
+
+    const selectedButton =
+        document.querySelector(
+            `.filter-btn[data-category="${category}"]`
         );
 
-        renderBusinesses();
+
+    if (selectedButton) {
+
+        selectedButton.classList.add("active");
     }
-);
 
 
-followingTab.addEventListener(
-    "click",
-    () => {
-
-        currentTab =
-            "following";
-
-        setActiveTab(
-            "following"
-        );
-
-        renderBusinesses();
-    }
-);
+    renderBusinesses();
+}
 
 
-offersTab.addEventListener(
-    "click",
-    () => {
-
-        currentTab =
-            "offers";
-
-        setActiveTab(
-            "offers"
-        );
-
-        renderBusinesses();
-    }
-);
-
-
-// =========================================================
+// =========================
 // SEARCH
-// =========================================================
+// =========================
 
-searchInput.addEventListener(
-    "input",
-    event => {
+function handleSearch() {
 
-        searchText =
-            event.target.value;
+    searchText =
+        searchInput.value;
 
-        renderBusinesses();
-    }
-);
+    renderBusinesses();
+}
 
 
-// =========================================================
-// CATEGORY FILTERS
-// =========================================================
-
-filterButtons.forEach(
-    button => {
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                filterButtons.forEach(
-                    item =>
-                        item.classList.remove(
-                            "active"
-                        )
-                );
-
-
-                button.classList.add(
-                    "active"
-                );
-
-
-                currentCategory =
-                    button.dataset.category;
-
-
-                renderBusinesses();
-            }
-        );
-    }
-);
-
-
-// =========================================================
-// BOTTOM NAVIGATION
-// =========================================================
-
-homeNav.addEventListener(
-    "click",
-    () => {
-
-        window.location.href =
-            "/";
-    }
-);
-
-
-profileNav.addEventListener(
-    "click",
-    () => {
-
-        window.location.href =
-            "/static/profile.html";
-    }
-);
-
-
-// =========================================================
+// =========================
 // CATEGORY ICON
-// =========================================================
+// =========================
 
-function getCategoryIcon(
-    category
-) {
+function getCategoryIcon(category) {
 
     const value =
-        String(
-            category || ""
-        ).toLowerCase();
+        (category || "").toLowerCase();
 
 
     if (
-        value.includes("cafe")
+        value.includes("cafe") ||
+        value.includes("coffee")
     ) {
-
         return "☕";
     }
 
 
     if (
-        value.includes("restaurant")
+        value.includes("restaurant") ||
+        value.includes("food")
     ) {
-
         return "🍽️";
     }
 
@@ -719,7 +535,6 @@ function getCategoryIcon(
         value.includes("shop") ||
         value.includes("store")
     ) {
-
         return "🛍️";
     }
 
@@ -728,45 +543,125 @@ function getCategoryIcon(
 }
 
 
-// =========================================================
+// =========================
 // HTML ESCAPE
-// =========================================================
+// =========================
 
-function escapeHtml(
-    value
-) {
+function escapeHtml(value) {
 
-    return String(
-        value || ""
-    )
-    .replace(
-        /&/g,
-        "&amp;"
-    )
-    .replace(
-        /</g,
-        "&lt;"
-    )
-    .replace(
-        />/g,
-        "&gt;"
-    )
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-    .replace(
-        /'/g,
-        "&#039;"
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// =========================
+// EVENT LISTENERS
+// =========================
+
+
+// SEARCH
+
+if (searchInput) {
+
+    searchInput.addEventListener(
+        "input",
+        handleSearch
     );
 }
 
 
-// =========================================================
-// INITIAL LOAD
-// =========================================================
+// NEARBY
 
-// No GPS.
-// Load businesses already saved in database.
+if (nearbyTab) {
 
-loadBusinesses();
+    nearbyTab.addEventListener(
+        "click",
+        function() {
+            setActiveTab("nearby");
+        }
+    );
+}
+
+
+// FOLLOWING
+
+if (followingTab) {
+
+    followingTab.addEventListener(
+        "click",
+        function() {
+            setActiveTab("following");
+        }
+    );
+}
+
+
+// OFFERS
+
+if (offersTab) {
+
+    offersTab.addEventListener(
+        "click",
+        function() {
+            setActiveTab("offers");
+        }
+    );
+}
+
+
+// CATEGORY BUTTONS
+
+filterButtons.forEach(function(button) {
+
+    button.addEventListener(
+        "click",
+        function() {
+
+            const category =
+                button.dataset.category;
+
+            setCategory(category);
+        }
+    );
+});
+
+
+// PROFILE
+
+if (profileNav) {
+
+    profileNav.addEventListener(
+        "click",
+        function() {
+
+            window.location.href =
+                "/static/profile.html";
+        }
+    );
+}
+
+
+// HOME
+
+if (homeNav) {
+
+    homeNav.addEventListener(
+        "click",
+        function() {
+
+            window.location.href =
+                "/";
+        }
+    );
+}
+
+
+// =========================
+// START APP
+// =========================
+
+setActiveTab("nearby");
