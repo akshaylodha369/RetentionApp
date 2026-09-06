@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Form, Response, Cookie
+from fastapi import FastAPI, HTTPException, Form, Response, Cookie, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -405,6 +405,195 @@ def business_detail(
 
 
 # =========================================================
+# ONE-TIME BUSINESS MIGRATION
+# =========================================================
+
+@app.post("/api/admin/migrate-businesses")
+async def migrate_businesses(
+    request: Request
+):
+
+    migration_secret = os.environ.get(
+        "BUSINESS_MIGRATION_SECRET"
+    )
+
+    provided_secret = request.headers.get(
+        "X-Migration-Secret"
+    )
+
+    if (
+        not migration_secret
+        or not provided_secret
+        or not hmac.compare_digest(
+            provided_secret,
+            migration_secret
+        )
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Not found."
+        )
+
+    content_length = request.headers.get(
+        "content-length"
+    )
+
+    if content_length:
+
+        try:
+
+            if int(content_length) > 1_000_000:
+                raise HTTPException(
+                    status_code=413,
+                    detail="Migration payload too large."
+                )
+
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid content length."
+            )
+
+    try:
+
+        body = await request.json()
+
+    except Exception:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid JSON payload."
+        )
+
+    businesses_data = body.get(
+        "businesses"
+    )
+
+    if not isinstance(
+        businesses_data,
+        list
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Businesses list is required."
+        )
+
+    if len(businesses_data) > 500:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Too many businesses."
+        )
+
+    cleaned = []
+
+    for item in businesses_data:
+
+        if not isinstance(
+            item,
+            dict
+        ):
+            continue
+
+        name = str(
+            item.get("name", "")
+        ).strip()
+
+        category = str(
+            item.get("category", "shop")
+        ).strip().lower()
+
+        address = str(
+            item.get("address", "")
+        ).strip()
+
+        offer_value = item.get(
+            "offer"
+        )
+
+        if offer_value is None:
+            offer = ""
+
+        else:
+            offer = str(
+                offer_value
+            ).strip()[:500]
+
+        try:
+
+            latitude = float(
+                item.get("latitude")
+            )
+
+            longitude = float(
+                item.get("longitude")
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+            continue
+
+        if not name:
+            continue
+
+        if not (
+            -90 <= latitude <= 90
+        ):
+            continue
+
+        if not (
+            -180 <= longitude <= 180
+        ):
+            continue
+
+        if category not in (
+            "cafe",
+            "restaurant",
+            "shop"
+        ):
+            category = "shop"
+
+        cleaned.append(
+            (
+                name,
+                category,
+                latitude,
+                longitude,
+                address,
+                offer,
+                None
+            )
+        )
+
+    if not cleaned:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No valid businesses found."
+        )
+
+    added = add_businesses(
+        cleaned
+    )
+
+    print(
+        f"BUSINESS MIGRATION | "
+        f"received={len(businesses_data)} | "
+        f"valid={len(cleaned)} | "
+        f"added={added}"
+    )
+
+    return {
+        "success": True,
+        "received": len(businesses_data),
+        "valid": len(cleaned),
+        "added": added
+    }
+
+
+# =========================================================
 # NEARBY BUSINESSES
 # =========================================================
 
@@ -425,11 +614,6 @@ def nearby(
             status_code=400,
             detail="Invalid longitude."
         )
-
-    # -----------------------------------------------------
-    # STEP 1:
-    # DATABASE / CACHE FIRST
-    # -----------------------------------------------------
 
     cached_rows = get_nearby_businesses(
         lat,
@@ -466,11 +650,6 @@ def nearby(
         "NEARBY CACHE MISS | "
         "No businesses found in database."
     )
-
-    # -----------------------------------------------------
-    # STEP 2:
-    # GOOGLE PLACES - ONLY ONE REQUEST
-    # -----------------------------------------------------
 
     if not GOOGLE_PLACES_API_KEY:
 
@@ -537,12 +716,6 @@ def nearby(
                 f"response={safe_error}"
             )
 
-            # -------------------------------------------------
-            # IMPORTANT:
-            # Google fail hone par [] return karne ke bajay
-            # clear error return karenge.
-            # -------------------------------------------------
-
             raise HTTPException(
                 status_code=502,
                 detail={
@@ -589,11 +762,6 @@ def nearby(
             detail="Google returned an invalid response."
         )
 
-    # -----------------------------------------------------
-    # STEP 3:
-    # CONVERT GOOGLE RESULTS
-    # -----------------------------------------------------
-
     for place in places:
 
         place_id = place.get("id")
@@ -634,12 +802,11 @@ def nearby(
             ""
         )
 
-        if latitude is None or longitude is None:
+        if (
+            latitude is None
+            or longitude is None
+        ):
             continue
-
-        # -------------------------------------------------
-        # Determine category from Google types
-        # -------------------------------------------------
 
         google_types = place.get(
             "types",
@@ -675,11 +842,6 @@ def nearby(
         f"found={len(found)}"
     )
 
-    # -----------------------------------------------------
-    # STEP 4:
-    # SAVE TO DATABASE
-    # -----------------------------------------------------
-
     if found:
 
         added = add_businesses(
@@ -690,11 +852,6 @@ def nearby(
             f"NEARBY DATABASE SAVE | "
             f"added={added}"
         )
-
-    # -----------------------------------------------------
-    # STEP 5:
-    # READ FINAL RESULTS FROM DATABASE
-    # -----------------------------------------------------
 
     nearby_rows = get_nearby_businesses(
         lat,
@@ -734,6 +891,7 @@ def nearby(
 def load_businesses():
 
     if not GOOGLE_PLACES_API_KEY:
+
         raise HTTPException(
             status_code=500,
             detail="Google Places API key is not configured."
@@ -821,7 +979,10 @@ def load_businesses():
                 ""
             )
 
-            if latitude is None or longitude is None:
+            if (
+                latitude is None
+                or longitude is None
+            ):
                 continue
 
             category = "shop"
@@ -881,6 +1042,7 @@ def toggle_follow(
     conn.close()
 
     if not business:
+
         raise HTTPException(
             status_code=404,
             detail="Business not found."
@@ -950,6 +1112,7 @@ def check_follow(
     user = get_current_user(session)
 
     if not user:
+
         return {
             "following": False
         }
@@ -1007,18 +1170,21 @@ def owner_signup(
     email = email.strip().lower()
 
     if not name:
+
         raise HTTPException(
             status_code=400,
             detail="Name is required."
         )
 
     if not email:
+
         raise HTTPException(
             status_code=400,
             detail="Email is required."
         )
 
     if len(password) < 6:
+
         raise HTTPException(
             status_code=400,
             detail="Password must be at least 6 characters."
@@ -1074,12 +1240,14 @@ def owner_login(
     )
 
     if not user:
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password."
         )
 
     if user[4] != "owner":
+
         raise HTTPException(
             status_code=403,
             detail="This account is not an owner account."
@@ -1089,6 +1257,7 @@ def owner_login(
         password,
         user[3]
     ):
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password."
@@ -1168,6 +1337,7 @@ def update_offer(
     offer = offer.strip()
 
     if len(offer) > 500:
+
         raise HTTPException(
             status_code=400,
             detail="Offer is too long."
@@ -1178,12 +1348,14 @@ def update_offer(
     )
 
     if not row:
+
         raise HTTPException(
             status_code=404,
             detail="Business not found."
         )
 
     if row[7] != owner[0]:
+
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to edit this business."
@@ -1207,10 +1379,13 @@ def update_offer(
     )
 
     conn.commit()
+
     updated = cursor.rowcount
+
     conn.close()
 
     if updated == 0:
+
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to edit this business."
