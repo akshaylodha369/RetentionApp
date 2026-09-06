@@ -48,8 +48,6 @@ init_db()
 
 PASSWORD_ITERATIONS = 100000
 
-# Production me SESSION_SECRET environment variable use hoga.
-# Local development me process ke liye secure random secret banega.
 SESSION_SECRET = os.environ.get(
     "SESSION_SECRET",
     secrets.token_hex(32)
@@ -106,13 +104,13 @@ def create_session(user_id):
     return user_value + "." + signature
 
 
-def get_current_user(user_id):
+def get_current_user(session):
 
-    if not user_id:
+    if not session:
         return None
 
     try:
-        user_value, signature = user_id.split(".", 1)
+        user_value, signature = session.split(".", 1)
         uid = int(user_value)
     except Exception:
         return None
@@ -132,9 +130,9 @@ def get_current_user(user_id):
     return get_user_by_id(uid)
 
 
-def require_login(user_id):
+def require_login(session):
 
-    user = get_current_user(user_id)
+    user = get_current_user(session)
 
     if not user:
         raise HTTPException(
@@ -145,9 +143,9 @@ def require_login(user_id):
     return user
 
 
-def require_owner(user_id):
+def require_owner(session):
 
-    user = require_login(user_id)
+    user = require_login(session)
 
     if user[3] != "owner":
         raise HTTPException(
@@ -428,7 +426,54 @@ def nearby(
             detail="Invalid longitude."
         )
 
+    # -----------------------------------------------------
+    # STEP 1:
+    # DATABASE / CACHE FIRST
+    # -----------------------------------------------------
+
+    cached_rows = get_nearby_businesses(
+        lat,
+        lng,
+        radius_km=3.0
+    )
+
+    if cached_rows:
+
+        print(
+            f"NEARBY CACHE HIT | "
+            f"results={len(cached_rows)}"
+        )
+
+        return [
+            {
+                "id": row[0],
+                "name": row[1],
+                "category": row[2],
+                "latitude": row[3],
+                "longitude": row[4],
+                "address": row[5],
+                "offer": row[6],
+                "owner_id": row[7],
+                "distance_km": round(
+                    distance_km,
+                    2
+                )
+            }
+            for row, distance_km in cached_rows
+        ]
+
+    print(
+        "NEARBY CACHE MISS | "
+        "No businesses found in database."
+    )
+
+    # -----------------------------------------------------
+    # STEP 2:
+    # GOOGLE PLACES - ONLY ONE REQUEST
+    # -----------------------------------------------------
+
     if not GOOGLE_PLACES_API_KEY:
+
         raise HTTPException(
             status_code=500,
             detail="Google Places API key is not configured."
@@ -451,117 +496,215 @@ def nearby(
         )
     }
 
-    categories = [
-        ("cafe", ["cafe"]),
-        ("restaurant", ["restaurant"]),
-        ("shop", ["store"])
-    ]
+    payload = {
+        "includedTypes": [
+            "cafe",
+            "restaurant",
+            "store"
+        ],
+        "maxResultCount": 20,
+        "rankPreference": "DISTANCE",
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": lat,
+                    "longitude": lng
+                },
+                "radius": 3000.0
+            }
+        }
+    }
 
     found = []
     seen = set()
 
-    for category_name, included_types in categories:
+    try:
 
-        payload = {
-            "includedTypes": included_types,
-            "maxResultCount": 20,
-            "rankPreference": "DISTANCE",
-            "locationRestriction": {
-                "circle": {
-                    "center": {
-                        "latitude": lat,
-                        "longitude": lng
-                    },
+        result = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
 
-                    # Google request stays 3 km for now.
-                    # App-side radius can be expanded later.
-                    "radius": 3000.0
+        if not result.ok:
+
+            safe_error = result.text[:1000]
+
+            print(
+                f"GOOGLE PLACES ERROR | "
+                f"status={result.status_code} | "
+                f"response={safe_error}"
+            )
+
+            # -------------------------------------------------
+            # IMPORTANT:
+            # Google fail hone par [] return karne ke bajay
+            # clear error return karenge.
+            # -------------------------------------------------
+
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Google Places API request failed.",
+                    "google_status": result.status_code
                 }
-            }
-        }
-
-        try:
-
-            result = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=15
             )
 
-            if not result.ok:
-                continue
+        data = result.json()
 
-            places = result.json().get(
-                "places",
-                []
-            )
+        places = data.get(
+            "places",
+            []
+        )
 
-        except requests.RequestException:
+        print(
+            f"GOOGLE PLACES SUCCESS | "
+            f"results={len(places)}"
+        )
 
+    except HTTPException:
+        raise
+
+    except requests.RequestException as error:
+
+        print(
+            f"GOOGLE PLACES REQUEST ERROR | "
+            f"error={error}"
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Google Places request failed."
+        )
+
+    except ValueError:
+
+        print(
+            "GOOGLE PLACES JSON ERROR"
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Google returned an invalid response."
+        )
+
+    # -----------------------------------------------------
+    # STEP 3:
+    # CONVERT GOOGLE RESULTS
+    # -----------------------------------------------------
+
+    for place in places:
+
+        place_id = place.get("id")
+
+        if not place_id:
             continue
 
-        for place in places:
+        if place_id in seen:
+            continue
 
-            place_id = place.get("id")
+        seen.add(place_id)
 
-            if not place_id:
-                continue
+        display_name = (
+            place.get("displayName")
+            or {}
+        )
 
-            if place_id in seen:
-                continue
+        name = display_name.get(
+            "text",
+            "Unnamed Business"
+        )
 
-            seen.add(place_id)
+        location = (
+            place.get("location")
+            or {}
+        )
 
-            display_name = (
-                place.get("displayName")
-                or {}
+        latitude = location.get(
+            "latitude"
+        )
+
+        longitude = location.get(
+            "longitude"
+        )
+
+        address = place.get(
+            "formattedAddress",
+            ""
+        )
+
+        if latitude is None or longitude is None:
+            continue
+
+        # -------------------------------------------------
+        # Determine category from Google types
+        # -------------------------------------------------
+
+        google_types = place.get(
+            "types",
+            []
+        )
+
+        if "cafe" in google_types:
+            category = "cafe"
+
+        elif "restaurant" in google_types:
+            category = "restaurant"
+
+        elif "store" in google_types:
+            category = "shop"
+
+        else:
+            category = "shop"
+
+        found.append(
+            (
+                name,
+                category,
+                latitude,
+                longitude,
+                address,
+                "",
+                None
             )
+        )
 
-            name = display_name.get(
-                "text",
-                "Unnamed Business"
-            )
+    print(
+        f"NEARBY GOOGLE RESULTS | "
+        f"found={len(found)}"
+    )
 
-            location = (
-                place.get("location")
-                or {}
-            )
+    # -----------------------------------------------------
+    # STEP 4:
+    # SAVE TO DATABASE
+    # -----------------------------------------------------
 
-            latitude = location.get(
-                "latitude"
-            )
+    if found:
 
-            longitude = location.get(
-                "longitude"
-            )
+        added = add_businesses(
+            found
+        )
 
-            address = place.get(
-                "formattedAddress",
-                ""
-            )
+        print(
+            f"NEARBY DATABASE SAVE | "
+            f"added={added}"
+        )
 
-            if latitude is None or longitude is None:
-                continue
-
-            found.append(
-                (
-                    name,
-                    category_name,
-                    latitude,
-                    longitude,
-                    address,
-                    "",
-                    None
-                )
-            )
-
-    add_businesses(found)
+    # -----------------------------------------------------
+    # STEP 5:
+    # READ FINAL RESULTS FROM DATABASE
+    # -----------------------------------------------------
 
     nearby_rows = get_nearby_businesses(
         lat,
         lng,
         radius_km=3.0
+    )
+
+    print(
+        f"NEARBY FINAL | "
+        f"results={len(nearby_rows)}"
     )
 
     return [
@@ -579,7 +722,6 @@ def nearby(
                 2
             )
         }
-
         for row, distance_km in nearby_rows
     ]
 
@@ -846,7 +988,6 @@ def following(
             "offer": row[6],
             "owner_id": row[7]
         }
-
         for row in rows
     ]
 
@@ -1005,7 +1146,6 @@ def owner_businesses(
             "offer": row[6],
             "owner_id": row[7]
         }
-
         for row in rows
     ]
 
