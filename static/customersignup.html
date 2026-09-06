@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Create Account - RetentionApp</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+<main class="auth-container">
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            👤
+        </div>
+
+        <h1>Create your account</h1>
+
+        <p class="auth-subtitle">
+            Join RetentionApp and discover businesses near you.
+        </p>
+
+        <form id="signupForm">
+
+            <input
+                type="text"
+                id="signupName"
+                placeholder="Your name"
+                autocomplete="name"
+                required
+            >
+
+            <input
+                type="email"
+                id="signupEmail"
+                placeholder="Email"
+                autocomplete="email"
+                required
+            >
+
+            <input
+                type="password"
+                id="signupPassword"
+                placeholder="Password (6+ characters)"
+                autocomplete="new-password"
+                minlength="6"
+                required
+            >
+
+            <button
+                type="submit"
+                class="auth-button"
+                id="signupButton"
+            >
+                Create Account
+            </button>
+
+        </form>
+
+        <p
+            id="signupMessage"
+            class="auth-message"
+        ></p>
+
+        <div class="auth-divider">
+            OR
+        </div>
+
+        <button
+            id="loginButton"
+            class="secondary-auth-button"
+        >
+            Already have an account? Login
+        </button>
+
+    </div>
+
+</main>
+
+<script>
+
+const signupForm =
+    document.getElementById("signupForm");
+
+const signupButton =
+    document.getElementById("signupButton");
+
+const signupMessage =
+    document.getElementById("signupMessage");
+
+
+signupForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+        const name =
+            document.getElementById("signupName")
+                .value
+                .trim();
+
+        const email =
+            document.getElementById("signupEmail")
+                .value
+                .trim()
+                .toLowerCase();
+
+        const password =
+            document.getElementById("signupPassword")
+                .value;
+
+        if (!name) {
+
+            signupMessage.textContent =
+                "❌ Please enter your name.";
+
+            return;
+        }
+
+        if (password.length < 6) {
+
+            signupMessage.textContent =
+                "❌ Password must be at least 6 characters.";
+
+            return;
+        }
+
+        signupButton.disabled = true;
+        signupButton.textContent =
+            "Creating account...";
+
+        signupMessage.textContent =
+            "Creating your account...";
+
+        try {
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "name",
+                name
+            );
+
+            formData.append(
+                "email",
+                email
+            );
+
+            formData.append(
+                "password",
+                password
+            );
+
+            const response =
+                await fetch(
+                    "/api/signup",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Signup failed."
+                );
+            }
+
+            /*
+             * Account is created.
+             * Now automatically log the user in.
+             */
+
+            const loginData =
+                new FormData();
+
+            loginData.append(
+                "email",
+                email
+            );
+
+            loginData.append(
+                "password",
+                password
+            );
+
+            const loginResponse =
+                await fetch(
+                    "/api/login",
+                    {
+                        method: "POST",
+                        body: loginData
+                    }
+                );
+
+            const loginResult =
+                await loginResponse.json();
+
+            if (!loginResponse.ok) {
+
+                throw new Error(
+                    loginResult.detail ||
+                    "Account created, but automatic login failed."
+                );
+            }
+
+            signupMessage.textContent =
+                "✅ Account created! Opening RetentionApp...";
+
+            setTimeout(
+                function() {
+
+                    window.location.href = "/";
+
+                },
+                500
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Signup error:",
+                error
+            );
+
+            signupMessage.textContent =
+                "❌ " + error.message;
+
+            signupButton.disabled = false;
+            signupButton.textContent =
+                "Create Account";
+        }
+
+    }
+);
+
+
+document.getElementById(
+    "loginButton"
+).addEventListener(
+    "click",
+    function() {
+
+        window.location.href =
+            "/static/login.html";
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

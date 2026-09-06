@@ -1,201 +1,330 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>RetentionApp</title>
 
-    <link rel="stylesheet" href="/static/style.css">
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
 </head>
 
 <body>
 
+<header class="top-bar">
+
+    <div class="brand">
+
+        <div class="brand-mark">
+            R
+        </div>
+
+        <div class="brand-text">
+
+            <h1>
+                RetentionApp
+            </h1>
+
+            <span>
+                Your places. Your perks.
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <a
+        href="/static/profile.html"
+        class="profile"
+        aria-label="Profile"
+    >
+        👤
+    </a>
+
+</header>
+
+
+<main>
+
+
     <!-- =========================
-         TOP BAR
+         HERO
     ========================== -->
 
-    <header class="top-bar">
+    <section class="hero">
 
-        <h1>RetentionApp</h1>
-
-        <a
-            href="/static/profile.html"
-            class="profile"
-            aria-label="Profile"
-        >
-            👤
-        </a>
-
-    </header>
+        <div class="hero-badge">
+            ✦ Discover Nearby
+        </div>
 
 
-    <!-- =========================
-         MAIN
-    ========================== -->
-
-    <main>
-
-        <!-- =========================
-             WELCOME
-        ========================== -->
-
-        <section class="welcome">
-
-            <h2>Discover businesses near you</h2>
-
-            <p>
-                Follow your favourite businesses and
-                discover their latest offers.
-            </p>
-
-        </section>
+        <h1>
+            Your favourite places,
+            <br>
+            all in one place.
+        </h1>
 
 
-        <!-- =========================
-             SEARCH
-        ========================== -->
-
-        <section class="search-box">
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search businesses..."
-                autocomplete="off"
-            >
-
-        </section>
+        <p>
+            Discover local businesses, follow the ones you love
+            and stay updated with their offers.
+        </p>
 
 
-        <!-- =========================
-             CATEGORY FILTERS
-        ========================== -->
+        <div class="hero-stats">
 
-        <section class="filters">
+            <div class="stat-card">
 
-            <button
-                class="filter-btn active"
-                data-category="all"
-                type="button"
-            >
-                All
-            </button>
+                <h3>
+                    100+
+                </h3>
 
-            <button
-                class="filter-btn"
-                data-category="cafe"
-                type="button"
-            >
-                ☕ Cafe
-            </button>
-
-            <button
-                class="filter-btn"
-                data-category="restaurant"
-                type="button"
-            >
-                🍽️ Restaurant
-            </button>
-
-            <button
-                class="filter-btn"
-                data-category="shop"
-                type="button"
-            >
-                🛍️ Shop
-            </button>
-
-        </section>
-
-
-        <!-- =========================
-             MAIN TABS
-        ========================== -->
-
-        <section class="tabs">
-
-            <button
-                id="nearbyTab"
-                class="active"
-                type="button"
-            >
-                📍 Nearby
-            </button>
-
-            <button
-                id="followingTab"
-                type="button"
-            >
-                ❤️ Following
-            </button>
-
-            <button
-                id="offersTab"
-                type="button"
-            >
-                🎟️ Offers
-            </button>
-
-        </section>
-
-
-        <!-- =========================
-             BUSINESS SECTION
-        ========================== -->
-
-        <section class="business-section">
-
-            <h2 id="sectionTitle">
-                Nearby Businesses
-            </h2>
-
-            <div id="businessList">
-
-                <p>
-                    Loading businesses...
-                </p>
+                <span>
+                    Businesses
+                </span>
 
             </div>
 
-        </section>
 
-    </main>
+            <div class="stat-card">
+
+                <h3>
+                    24/7
+                </h3>
+
+                <span>
+                    Offers
+                </span>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>
+                    Near
+                </h3>
+
+                <span>
+                    Your Area
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
 
 
     <!-- =========================
-         BOTTOM NAV
+         SEARCH
     ========================== -->
 
-    <nav class="bottom-nav">
+    <section class="search-box">
+
+        <span class="search-icon">
+            ⌕
+        </span>
+
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search businesses..."
+            autocomplete="off"
+        >
+
+    </section>
+
+
+    <!-- =========================
+         CATEGORY FILTERS
+    ========================== -->
+
+    <section class="filters">
 
         <button
-            id="homeNav"
+            class="filter-btn active"
+            data-category="all"
+            type="button"
+        >
+            All
+        </button>
+
+
+        <button
+            class="filter-btn"
+            data-category="cafe"
+            type="button"
+        >
+            ☕ Cafes
+        </button>
+
+
+        <button
+            class="filter-btn"
+            data-category="restaurant"
+            type="button"
+        >
+            🍽 Restaurants
+        </button>
+
+
+        <button
+            class="filter-btn"
+            data-category="shop"
+            type="button"
+        >
+            🛍 Shops
+        </button>
+
+    </section>
+
+
+    <!-- =========================
+         TABS
+    ========================== -->
+
+    <section class="tabs">
+
+        <button
+            id="nearbyTab"
             class="active"
             type="button"
-            aria-label="Home"
         >
-            🏠
+            <span>
+                ⌖
+            </span>
+
+            Nearby
         </button>
+
 
         <button
-            id="profileNav"
+            id="followingTab"
             type="button"
-            aria-label="Profile"
         >
-            👤
+            <span>
+                ♡
+            </span>
+
+            Following
         </button>
 
-    </nav>
+
+        <button
+            id="offersTab"
+            type="button"
+        >
+            <span>
+                ✦
+            </span>
+
+            Offers
+        </button>
+
+    </section>
 
 
     <!-- =========================
-         JAVASCRIPT
+         BUSINESS SECTION
     ========================== -->
 
-    <script src="/static/app.js"></script>
+    <section class="business-section">
+
+        <div class="section-heading">
+
+            <div>
+
+                <p class="section-eyebrow">
+                    AROUND YOU
+                </p>
+
+
+                <h2 id="sectionTitle">
+                    Nearby Businesses
+                </h2>
+
+            </div>
+
+
+            <div class="nearby-badge">
+
+                <span></span>
+
+                Nearby
+
+            </div>
+
+        </div>
+
+
+        <div id="businessList">
+
+            <p class="loading-text">
+                Finding places near you...
+            </p>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- =========================
+     BOTTOM NAV
+========================= -->
+
+<nav class="bottom-nav">
+
+    <button
+        id="homeNav"
+        class="active"
+        type="button"
+        aria-label="Home"
+    >
+
+        <span>
+            ⌂
+        </span>
+
+        <small>
+            Home
+        </small>
+
+    </button>
+
+
+    <button
+        id="profileNav"
+        type="button"
+        aria-label="Profile"
+    >
+
+        <span>
+            ♙
+        </span>
+
+        <small>
+            Profile
+        </small>
+
+    </button>
+
+</nav>
+
+
+<script src="/static/app.js"></script>
 
 </body>
 

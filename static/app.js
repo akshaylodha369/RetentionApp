@@ -4,11 +4,6 @@ let currentCategory = "all";
 let searchText = "";
 let nearbyLoaded = false;
 
-
-// =========================
-// ELEMENTS
-// =========================
-
 const searchInput = document.getElementById("searchInput");
 const businessList = document.getElementById("businessList");
 const sectionTitle = document.getElementById("sectionTitle");
@@ -23,17 +18,20 @@ const homeNav = document.getElementById("homeNav");
 const profileNav = document.getElementById("profileNav");
 
 
-// =========================
+// =========================================================
 // LOAD NEARBY BUSINESSES
-// =========================
+// =========================================================
 
 function loadNearbyBusinesses() {
 
-    businessList.innerHTML = "<p>Finding businesses near you...</p>";
+    businessList.innerHTML =
+        "<p>Finding businesses near you...</p>";
 
     if (!navigator.geolocation) {
+
         businessList.innerHTML =
             "<p>Location is not supported by your browser.</p>";
+
         return;
     }
 
@@ -51,7 +49,9 @@ function loadNearbyBusinesses() {
                 );
 
                 if (!response.ok) {
-                    throw new Error("Failed to load nearby businesses");
+                    throw new Error(
+                        "Failed to load nearby businesses"
+                    );
                 }
 
                 allBusinesses = await response.json();
@@ -94,15 +94,14 @@ function loadNearbyBusinesses() {
 }
 
 
-// =========================
+// =========================================================
 // FILTER BUSINESSES
-// =========================
+// =========================================================
 
 function getFilteredBusinesses(businesses) {
 
     return businesses.filter(function(business) {
 
-        // CATEGORY
         if (currentCategory !== "all") {
 
             const category =
@@ -125,8 +124,6 @@ function getFilteredBusinesses(businesses) {
             }
         }
 
-
-        // SEARCH
         if (searchText.trim() !== "") {
 
             const search =
@@ -155,29 +152,28 @@ function getFilteredBusinesses(businesses) {
 }
 
 
-// =========================
+// =========================================================
 // RENDER BUSINESSES
-// =========================
+// =========================================================
 
 async function renderBusinesses() {
 
     if (currentTab === "following") {
 
         await loadFollowingBusinesses();
+
         return;
     }
-
 
     if (currentTab === "offers") {
 
         await loadOffers();
+
         return;
     }
 
-
     const filtered =
         getFilteredBusinesses(allBusinesses);
-
 
     if (filtered.length === 0) {
 
@@ -187,23 +183,26 @@ async function renderBusinesses() {
         return;
     }
 
-
     businessList.innerHTML =
         filtered.map(createBusinessCard).join("");
 }
 
 
-// =========================
+// =========================================================
 // BUSINESS CARD
-// =========================
+// =========================================================
 
 function createBusinessCard(business) {
 
     const name =
-        escapeHtml(business.name || "Unnamed Business");
+        escapeHtml(
+            business.name || "Unnamed Business"
+        );
 
     const category =
-        escapeHtml(business.category || "");
+        escapeHtml(
+            business.category || ""
+        );
 
     const address =
         escapeHtml(
@@ -211,11 +210,11 @@ function createBusinessCard(business) {
         );
 
     const offer =
-        escapeHtml(business.offer || "");
-
+        escapeHtml(
+            business.offer || ""
+        );
 
     let distanceHTML = "";
-
 
     if (
         business.distance_km !== undefined &&
@@ -227,14 +226,12 @@ function createBusinessCard(business) {
 
         if (!isNaN(distance)) {
 
-            distanceHTML = `
-                <p class="business-distance">
+            distanceHTML =
+                `<p class="business-distance">
                     📍 ${distance.toFixed(2)} km away
-                </p>
-            `;
+                </p>`;
         }
     }
-
 
     return `
         <div
@@ -262,11 +259,9 @@ function createBusinessCard(business) {
 
                 ${
                     offer
-                        ? `
-                            <div class="business-offer">
-                                🎟️ ${offer}
-                            </div>
-                        `
+                        ? `<div class="business-offer">
+                            🎟️ ${offer}
+                           </div>`
                         : ""
                 }
 
@@ -277,9 +272,9 @@ function createBusinessCard(business) {
 }
 
 
-// =========================
+// =========================================================
 // OPEN BUSINESS
-// =========================
+// =========================================================
 
 function openBusiness(id) {
 
@@ -288,47 +283,43 @@ function openBusiness(id) {
 }
 
 
-// =========================
-// FOLLOWING
-// =========================
+// =========================================================
+// FOLLOWING BUSINESSES
+// =========================================================
 
 async function loadFollowingBusinesses() {
 
     sectionTitle.textContent =
         "Following Businesses";
 
+    businessList.innerHTML =
+        "<p>Loading following businesses...</p>";
+
     try {
 
         const response =
             await fetch("/api/following");
 
-
         if (response.status === 401) {
 
-            businessList.innerHTML = `
-                <p>
-                    Please login to see businesses you follow.
-                </p>
-            `;
+            businessList.innerHTML =
+                `<p>Please login to see businesses you follow.</p>`;
 
             return;
         }
 
-
         if (!response.ok) {
+
             throw new Error(
                 "Failed to load following businesses"
             );
         }
 
-
         const businesses =
             await response.json();
 
-
         const filtered =
             getFilteredBusinesses(businesses);
-
 
         if (filtered.length === 0) {
 
@@ -337,7 +328,6 @@ async function loadFollowingBusinesses() {
 
             return;
         }
-
 
         businessList.innerHTML =
             filtered.map(createBusinessCard).join("");
@@ -352,18 +342,44 @@ async function loadFollowingBusinesses() {
 }
 
 
-// =========================
+// =========================================================
 // OFFERS
-// =========================
+// =========================================================
 
 async function loadOffers() {
 
     sectionTitle.textContent =
         "Latest Offers";
 
+    businessList.innerHTML =
+        "<p>Loading offers...</p>";
+
+    let businesses = allBusinesses;
+
+    if (businesses.length === 0) {
+
+        try {
+
+            const response =
+                await fetch("/api/businesses");
+
+            if (response.ok) {
+
+                businesses =
+                    await response.json();
+
+                allBusinesses =
+                    businesses;
+            }
+
+        } catch (error) {
+
+            console.error(error);
+        }
+    }
 
     const businessesWithOffers =
-        allBusinesses.filter(function(business) {
+        businesses.filter(function(business) {
 
             return (
                 business.offer &&
@@ -371,10 +387,10 @@ async function loadOffers() {
             );
         });
 
-
     const filtered =
-        getFilteredBusinesses(businessesWithOffers);
-
+        getFilteredBusinesses(
+            businessesWithOffers
+        );
 
     if (filtered.length === 0) {
 
@@ -384,29 +400,25 @@ async function loadOffers() {
         return;
     }
 
-
     businessList.innerHTML =
         filtered.map(createBusinessCard).join("");
 }
 
 
-// =========================
-// TAB SWITCHING
-// =========================
+// =========================================================
+// TABS
+// =========================================================
 
 function setActiveTab(tab) {
 
     currentTab = tab;
-
-
-    // Remove active from all tabs
 
     nearbyTab.classList.remove("active");
     followingTab.classList.remove("active");
     offersTab.classList.remove("active");
 
 
-    // Nearby
+    // NEARBY
 
     if (tab === "nearby") {
 
@@ -414,7 +426,6 @@ function setActiveTab(tab) {
 
         sectionTitle.textContent =
             "Nearby Businesses";
-
 
         if (!nearbyLoaded) {
 
@@ -429,7 +440,7 @@ function setActiveTab(tab) {
     }
 
 
-    // Following
+    // FOLLOWING
 
     if (tab === "following") {
 
@@ -444,7 +455,7 @@ function setActiveTab(tab) {
     }
 
 
-    // Offers
+    // OFFERS
 
     if (tab === "offers") {
 
@@ -460,41 +471,36 @@ function setActiveTab(tab) {
 }
 
 
-// =========================
+// =========================================================
 // CATEGORY FILTER
-// =========================
+// =========================================================
 
 function setCategory(category) {
 
     currentCategory = category;
 
-
     filterButtons.forEach(function(button) {
 
         button.classList.remove("active");
-
     });
-
 
     const selectedButton =
         document.querySelector(
             `.filter-btn[data-category="${category}"]`
         );
 
-
     if (selectedButton) {
 
         selectedButton.classList.add("active");
     }
 
-
     renderBusinesses();
 }
 
 
-// =========================
+// =========================================================
 // SEARCH
-// =========================
+// =========================================================
 
 function handleSearch() {
 
@@ -505,15 +511,14 @@ function handleSearch() {
 }
 
 
-// =========================
+// =========================================================
 // CATEGORY ICON
-// =========================
+// =========================================================
 
 function getCategoryIcon(category) {
 
     const value =
         (category || "").toLowerCase();
-
 
     if (
         value.includes("cafe") ||
@@ -522,14 +527,12 @@ function getCategoryIcon(category) {
         return "☕";
     }
 
-
     if (
         value.includes("restaurant") ||
         value.includes("food")
     ) {
         return "🍽️";
     }
-
 
     if (
         value.includes("shop") ||
@@ -538,32 +541,33 @@ function getCategoryIcon(category) {
         return "🛍️";
     }
 
-
     return "🏪";
 }
 
 
-// =========================
-// HTML ESCAPE
-// =========================
+// =========================================================
+// SECURITY: ESCAPE HTML
+// =========================================================
 
 function escapeHtml(value) {
 
     return String(value)
+
         .replace(/&/g, "&amp;")
+
         .replace(/</g, "&lt;")
+
         .replace(/>/g, "&gt;")
+
         .replace(/"/g, "&quot;")
+
         .replace(/'/g, "&#039;");
 }
 
 
-// =========================
+// =========================================================
 // EVENT LISTENERS
-// =========================
-
-
-// SEARCH
+// =========================================================
 
 if (searchInput) {
 
@@ -573,8 +577,6 @@ if (searchInput) {
     );
 }
 
-
-// NEARBY
 
 if (nearbyTab) {
 
@@ -587,8 +589,6 @@ if (nearbyTab) {
 }
 
 
-// FOLLOWING
-
 if (followingTab) {
 
     followingTab.addEventListener(
@@ -599,8 +599,6 @@ if (followingTab) {
     );
 }
 
-
-// OFFERS
 
 if (offersTab) {
 
@@ -613,24 +611,19 @@ if (offersTab) {
 }
 
 
-// CATEGORY BUTTONS
-
 filterButtons.forEach(function(button) {
 
     button.addEventListener(
         "click",
         function() {
 
-            const category =
-                button.dataset.category;
-
-            setCategory(category);
+            setCategory(
+                button.dataset.category
+            );
         }
     );
 });
 
-
-// PROFILE
 
 if (profileNav) {
 
@@ -645,23 +638,20 @@ if (profileNav) {
 }
 
 
-// HOME
-
 if (homeNav) {
 
     homeNav.addEventListener(
         "click",
         function() {
 
-            window.location.href =
-                "/";
+            window.location.href = "/";
         }
     );
 }
 
 
-// =========================
+// =========================================================
 // START APP
-// =========================
+// =========================================================
 
 setActiveTab("nearby");

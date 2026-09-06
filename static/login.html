@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -22,7 +21,6 @@
 
 <body>
 
-
 <main class="auth-container">
 
     <div class="auth-card">
@@ -36,9 +34,6 @@
         <p class="auth-subtitle">
             Login to discover offers from businesses you love.
         </p>
-
-
-        <!-- LOGIN FORM -->
 
         <form id="loginForm">
 
@@ -68,17 +63,14 @@
 
         </form>
 
-
         <p
             id="loginMessage"
             class="auth-message"
         ></p>
 
-
         <div class="auth-divider">
             OR
         </div>
-
 
         <button
             id="showSignup"
@@ -86,7 +78,6 @@
         >
             Create a new account
         </button>
-
 
         <button
             id="ownerLogin"
@@ -100,13 +91,7 @@
 
 </main>
 
-
 <script>
-
-
-// =========================
-// ELEMENTS
-// =========================
 
 const loginForm =
     document.getElementById("loginForm");
@@ -117,16 +102,6 @@ const loginMessage =
 const loginButton =
     document.getElementById("loginButton");
 
-const showSignup =
-    document.getElementById("showSignup");
-
-const ownerLogin =
-    document.getElementById("ownerLogin");
-
-
-// =========================
-// CUSTOMER LOGIN
-// =========================
 
 loginForm.addEventListener(
     "submit",
@@ -134,35 +109,27 @@ loginForm.addEventListener(
 
         event.preventDefault();
 
-
         const email =
-            document.getElementById(
-                "loginEmail"
-            ).value
-            .trim()
-            .toLowerCase();
-
+            document.getElementById("loginEmail")
+                .value
+                .trim()
+                .toLowerCase();
 
         const password =
-            document.getElementById(
-                "loginPassword"
-            ).value;
-
-
-        loginMessage.textContent =
-            "Logging in...";
+            document.getElementById("loginPassword")
+                .value;
 
         loginButton.disabled = true;
-
         loginButton.textContent =
             "Logging in...";
 
+        loginMessage.textContent =
+            "Checking your account...";
 
         try {
 
             const formData =
                 new FormData();
-
 
             formData.append(
                 "email",
@@ -174,7 +141,6 @@ loginForm.addEventListener(
                 password
             );
 
-
             const response =
                 await fetch(
                     "/api/login",
@@ -184,24 +150,19 @@ loginForm.addEventListener(
                     }
                 );
 
-
             const data =
                 await response.json();
-
 
             if (!response.ok) {
 
                 throw new Error(
                     data.detail ||
-                    "Login failed"
+                    "Invalid email or password."
                 );
-
             }
-
 
             loginMessage.textContent =
                 "✅ Login successful!";
-
 
             setTimeout(
                 function() {
@@ -210,9 +171,8 @@ loginForm.addEventListener(
                         "/";
 
                 },
-                500
+                400
             );
-
 
         } catch (error) {
 
@@ -221,27 +181,21 @@ loginForm.addEventListener(
                 error
             );
 
-
             loginMessage.textContent =
                 "❌ " + error.message;
 
-
             loginButton.disabled = false;
-
             loginButton.textContent =
                 "Login";
-
         }
 
     }
 );
 
 
-// =========================
-// SIGNUP
-// =========================
-
-showSignup.addEventListener(
+document.getElementById(
+    "showSignup"
+).addEventListener(
     "click",
     function() {
 
@@ -252,11 +206,9 @@ showSignup.addEventListener(
 );
 
 
-// =========================
-// OWNER LOGIN
-// =========================
-
-ownerLogin.addEventListener(
+document.getElementById(
+    "ownerLogin"
+).addEventListener(
     "click",
     function() {
 
@@ -267,7 +219,6 @@ ownerLogin.addEventListener(
 );
 
 </script>
-
 
 </body>
 
