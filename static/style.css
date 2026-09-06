@@ -5,14 +5,13 @@
 }
 
 :root {
-    --bg: #f7f7f5;
-    --white: #ffffff;
     --black: #151515;
     --text: #202020;
-    --muted: #777777;
-    --light: #f0f0ed;
-    --border: #e6e6e2;
-    --green: #3f7d60;
+    --muted: #777;
+    --soft: #f6f6f4;
+    --border: #e9e9e6;
+    --white: #ffffff;
+    --green: #2f7d5b;
 }
 
 html {
@@ -28,7 +27,7 @@ body {
         Arial,
         sans-serif;
 
-    background: var(--bg);
+    background: #fafaf8;
     color: var(--text);
 
     min-height: 100vh;
@@ -38,29 +37,27 @@ body {
 }
 
 
-/* ==================================================
+/* =========================
    TOP BAR
-================================================== */
+========================= */
 
 .top-bar {
     position: sticky;
     top: 0;
     z-index: 50;
 
-    width: 100%;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 16px 26px;
+    padding: 17px 22px;
 
-    background: rgba(247, 247, 245, 0.90);
-
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(250, 250, 248, 0.92);
 
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+
+    border-bottom: 1px solid rgba(0, 0, 0, 0.045);
 }
 
 .brand {
@@ -70,8 +67,8 @@ body {
 }
 
 .brand-mark {
-    width: 40px;
-    height: 40px;
+    width: 39px;
+    height: 39px;
 
     display: flex;
     align-items: center;
@@ -86,13 +83,12 @@ body {
     font-weight: 800;
 
     box-shadow:
-        0 6px 16px rgba(0, 0, 0, 0.14);
+        0 5px 14px rgba(0, 0, 0, 0.12);
 }
 
 .brand-text h1 {
     font-size: 16px;
     line-height: 1.1;
-
     letter-spacing: -0.4px;
 }
 
@@ -102,14 +98,13 @@ body {
     margin-top: 4px;
 
     color: #999;
-
     font-size: 10px;
     font-weight: 500;
 }
 
 .profile {
-    width: 41px;
-    height: 41px;
+    width: 40px;
+    height: 40px;
 
     display: flex;
     align-items: center;
@@ -118,237 +113,109 @@ body {
     border-radius: 50%;
 
     background: white;
-
     border: 1px solid var(--border);
 
     text-decoration: none;
-
     font-size: 18px;
 
     box-shadow:
-        0 4px 14px rgba(0, 0, 0, 0.05);
+        0 3px 12px rgba(0, 0, 0, 0.04);
 
     transition: 0.2s ease;
 }
 
 .profile:hover {
-    transform: translateY(-2px);
-
-    box-shadow:
-        0 7px 18px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
 }
 
 
-/* ==================================================
+/* =========================
    MAIN
-================================================== */
+========================= */
 
 main {
     width: 100%;
-    max-width: 900px;
+    max-width: 650px;
 
     margin: 0 auto;
 
-    padding: 38px 28px 35px;
+    padding: 32px 20px 30px;
 }
 
 
-/* ==================================================
-   HERO
-================================================== */
+/* =========================
+   WELCOME
+========================= */
 
-.hero {
-    position: relative;
-
-    overflow: hidden;
-
-    padding: 44px;
-
+.welcome {
     margin-bottom: 25px;
-
-    border-radius: 30px;
-
-    background:
-        radial-gradient(
-            circle at 85% 20%,
-            #3d4653 0%,
-            #252c35 30%,
-            #15191e 72%
-        );
-
-    color: white;
-
-    box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.15);
 }
 
-.hero::before {
-    content: "";
+.eyebrow {
+    margin-bottom: 11px;
 
-    position: absolute;
-
-    width: 330px;
-    height: 330px;
-
-    right: -130px;
-    top: -150px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(255, 255, 255, 0.055);
-}
-
-.hero::after {
-    content: "";
-
-    position: absolute;
-
-    width: 180px;
-    height: 180px;
-
-    right: 90px;
-    bottom: -130px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(255, 255, 255, 0.035);
-}
-
-.hero-badge {
-    position: relative;
-    z-index: 2;
-
-    display: inline-flex;
-    align-items: center;
-
-    padding: 8px 13px;
-
-    margin-bottom: 19px;
-
-    border-radius: 999px;
-
-    border: 1px solid rgba(255, 255, 255, 0.13);
-
-    background:
-        rgba(255, 255, 255, 0.08);
-
-    color: #e5e7eb;
-
-    font-size: 11px;
-    font-weight: 700;
-
-    letter-spacing: 0.2px;
-}
-
-.hero h1 {
-    position: relative;
-    z-index: 2;
-
-    max-width: 650px;
-
-    margin-bottom: 15px;
-
-    font-size: clamp(34px, 5vw, 50px);
-
-    line-height: 1.06;
-
-    letter-spacing: -2px;
-
-    font-weight: 800;
-}
-
-.hero p {
-    position: relative;
-    z-index: 2;
-
-    max-width: 570px;
-
-    color: #cbd0d6;
-
-    font-size: 14px;
-
-    line-height: 1.7;
-}
-
-.hero-stats {
-    position: relative;
-    z-index: 2;
-
-    display: flex;
-
-    gap: 10px;
-
-    max-width: 500px;
-
-    margin-top: 30px;
-}
-
-.stat-card {
-    flex: 1;
-
-    padding: 14px 16px;
-
-    border-radius: 16px;
-
-    border: 1px solid rgba(255, 255, 255, 0.09);
-
-    background:
-        rgba(255, 255, 255, 0.075);
-
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-}
-
-.stat-card h3 {
-    margin-bottom: 4px;
-
-    font-size: 19px;
-
-    letter-spacing: -0.4px;
-}
-
-.stat-card span {
-    color: #bfc5cc;
+    color: #969691;
 
     font-size: 10px;
+    font-weight: 800;
 
-    font-weight: 500;
+    letter-spacing: 1.5px;
+}
+
+.welcome h2 {
+    font-size: 34px;
+    line-height: 1.08;
+
+    letter-spacing: -1.5px;
+
+    font-weight: 750;
+
+    margin-bottom: 13px;
+}
+
+.welcome h2 span {
+    color: #a0a09b;
+}
+
+.welcome-text {
+    max-width: 500px;
+
+    color: #777;
+
+    font-size: 13px;
+    line-height: 1.65;
 }
 
 
-/* ==================================================
+/* =========================
    SEARCH
-================================================== */
+========================= */
 
 .search-box {
     position: relative;
 
-    margin: 0 8px 18px;
+    margin-bottom: 18px;
 }
 
 .search-box input {
     width: 100%;
-    height: 58px;
+    height: 56px;
 
-    padding:
-        0 20px 0 51px;
+    padding: 0 18px 0 48px;
 
-    border: 1px solid #e1e1dd;
-
+    border: 1px solid #e5e5e1;
     border-radius: 17px;
 
     outline: none;
 
     background: white;
 
-    color: var(--text);
+    color: #222;
 
     font-size: 14px;
 
     box-shadow:
-        0 7px 22px rgba(0, 0, 0, 0.055);
+        0 5px 20px rgba(0, 0, 0, 0.035);
 
     transition:
         border-color 0.2s ease,
@@ -356,14 +223,14 @@ main {
 }
 
 .search-box input::placeholder {
-    color: #a2a2a2;
+    color: #aaa;
 }
 
 .search-box input:focus {
-    border-color: #c9c9c5;
+    border-color: #cfcfcb;
 
     box-shadow:
-        0 9px 27px rgba(0, 0, 0, 0.075),
+        0 6px 24px rgba(0, 0, 0, 0.06),
         0 0 0 3px rgba(0, 0, 0, 0.025);
 }
 
@@ -373,29 +240,27 @@ main {
     left: 18px;
     top: 50%;
 
-    transform: translateY(-54%);
+    transform: translateY(-55%);
 
     color: #777;
 
-    font-size: 26px;
+    font-size: 25px;
 
     pointer-events: none;
 }
 
 
-/* ==================================================
-   FILTERS
-================================================== */
+/* =========================
+   CATEGORY FILTERS
+========================= */
 
 .filters {
     display: flex;
-
     gap: 8px;
 
     overflow-x: auto;
 
-    margin-bottom: 22px;
-
+    margin-bottom: 23px;
     padding: 2px 1px 5px;
 
     scrollbar-width: none;
@@ -408,15 +273,12 @@ main {
 .filter-btn {
     flex-shrink: 0;
 
-    padding: 9px 15px;
+    padding: 9px 14px;
 
-    border:
-        1px solid #e1e1dd;
-
-    border-radius: 999px;
+    border: 1px solid #e4e4e0;
+    border-radius: 30px;
 
     background: white;
-
     color: #666;
 
     font-size: 12px;
@@ -427,9 +289,9 @@ main {
     cursor: pointer;
 
     transition:
-        transform 0.2s ease,
         background 0.2s ease,
-        color 0.2s ease;
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .filter-btn:hover {
@@ -438,55 +300,45 @@ main {
 
 .filter-btn.active {
     background: var(--black);
-
     border-color: var(--black);
-
     color: white;
-
-    box-shadow:
-        0 5px 13px rgba(0, 0, 0, 0.11);
 }
 
 
-/* ==================================================
-   TABS
-================================================== */
+/* =========================
+   MAIN TABS
+========================= */
 
 .tabs {
     display: grid;
+    grid-template-columns: repeat(3, 1fr);
 
-    grid-template-columns:
-        repeat(3, 1fr);
+    gap: 4px;
 
-    gap: 5px;
-
-    padding: 5px;
+    padding: 4px;
 
     margin-bottom: 31px;
 
-    border-radius: 17px;
+    border-radius: 16px;
 
-    background: #eeeeeb;
-
-    border: 1px solid #e4e4e0;
+    background: #f0f0ed;
+    border: 1px solid #e8e8e4;
 }
 
 .tabs button {
-    min-height: 43px;
+    min-height: 42px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    gap: 7px;
+    gap: 6px;
 
     border: none;
-
-    border-radius: 13px;
+    border-radius: 12px;
 
     background: transparent;
-
-    color: #858585;
+    color: #888;
 
     font-size: 12px;
     font-weight: 700;
@@ -505,45 +357,40 @@ main {
 
 .tabs button.active {
     background: white;
-
     color: #181818;
 
     box-shadow:
-        0 3px 10px rgba(0, 0, 0, 0.06);
+        0 3px 10px rgba(0, 0, 0, 0.055);
 }
 
 
-/* ==================================================
-   SECTION HEADER
-================================================== */
+/* =========================
+   SECTION HEADING
+========================= */
 
 .section-heading {
     display: flex;
-
     align-items: flex-end;
-
     justify-content: space-between;
 
-    gap: 15px;
+    gap: 12px;
 
-    margin-bottom: 17px;
+    margin-bottom: 16px;
 }
 
 .section-eyebrow {
     margin-bottom: 5px;
 
-    color: #a2a2a0;
+    color: #aaa;
 
     font-size: 9px;
-
     font-weight: 800;
 
-    letter-spacing: 1.5px;
+    letter-spacing: 1.4px;
 }
 
 .business-section h2 {
-    font-size: 23px;
-
+    font-size: 21px;
     line-height: 1.15;
 
     letter-spacing: -0.7px;
@@ -551,24 +398,19 @@ main {
 
 .nearby-badge {
     display: flex;
-
     align-items: center;
-
     gap: 6px;
 
-    padding: 7px 11px;
+    padding: 7px 10px;
 
-    border:
-        1px solid var(--border);
-
-    border-radius: 999px;
+    border-radius: 20px;
 
     background: white;
+    border: 1px solid var(--border);
 
     color: #777;
 
     font-size: 10px;
-
     font-weight: 700;
 }
 
@@ -582,47 +424,29 @@ main {
 }
 
 
-/* ==================================================
-   BUSINESS LIST
-================================================== */
-
-#businessList {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 12px;
-}
-
-
-/* ==================================================
-   BUSINESS CARD
-================================================== */
+/* =========================
+   BUSINESS CARDS
+========================= */
 
 .business-card {
     position: relative;
 
-    min-width: 0;
-
     display: flex;
     align-items: center;
 
-    gap: 13px;
+    gap: 14px;
 
-    padding: 17px;
+    padding: 15px;
 
-    margin-bottom: 0;
-
-    border:
-        1px solid #e9e9e5;
-
-    border-radius: 20px;
+    margin-bottom: 10px;
 
     background: white;
 
+    border: 1px solid #eeeeeb;
+    border-radius: 19px;
+
     box-shadow:
-        0 4px 17px rgba(0, 0, 0, 0.04);
+        0 3px 15px rgba(0, 0, 0, 0.035);
 
     cursor: pointer;
 
@@ -633,17 +457,20 @@ main {
 }
 
 .business-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
 
-    border-color: #d9d9d4;
+    border-color: #deded9;
 
     box-shadow:
-        0 12px 28px rgba(0, 0, 0, 0.075);
+        0 9px 24px rgba(0, 0, 0, 0.07);
 }
 
 .business-card:active {
     transform: scale(0.985);
 }
+
+
+/* Business icon */
 
 .business-icon {
     width: 53px;
@@ -657,14 +484,16 @@ main {
 
     border-radius: 16px;
 
-    background: #f3f3f0;
+    background: #f4f4f1;
 
     font-size: 22px;
 }
 
+
+/* Business info */
+
 .business-info {
     min-width: 0;
-
     flex: 1;
 }
 
@@ -674,13 +503,13 @@ main {
     margin-bottom: 5px;
 
     font-size: 15px;
+    font-weight: 700;
 
     line-height: 1.25;
 
     letter-spacing: -0.2px;
 
     white-space: nowrap;
-
     text-overflow: ellipsis;
 }
 
@@ -702,15 +531,17 @@ main {
     overflow: hidden;
 
     white-space: nowrap;
-
     text-overflow: ellipsis;
 }
 
 .business-distance {
-    color: #555 !important;
+    color: #666 !important;
 
     font-weight: 650;
 }
+
+
+/* Offer */
 
 .business-offer {
     display: inline-block;
@@ -721,24 +552,21 @@ main {
 
     border-radius: 7px;
 
-    background: #eef6f1;
+    background: #f0f6f2;
 
-    color: #397258;
+    color: #39745a;
 
     font-size: 10px;
-
     font-weight: 750;
 }
 
 
-/* ==================================================
+/* =========================
    LOADING
-================================================== */
+========================= */
 
 .loading-text {
-    grid-column: 1 / -1;
-
-    padding: 35px 10px;
+    padding: 30px 10px;
 
     text-align: center;
 
@@ -748,9 +576,9 @@ main {
 }
 
 
-/* ==================================================
+/* =========================
    BUSINESS PROFILE
-================================================== */
+========================= */
 
 .business-profile {
     background: white;
@@ -803,18 +631,18 @@ main {
 }
 
 
-/* ==================================================
+/* =========================
    OFFER CARDS
-================================================== */
+========================= */
 
 .offer-card {
     background: white;
 
-    padding: 22px;
+    padding: 21px;
 
-    margin-bottom: 12px;
+    margin-bottom: 11px;
 
-    border-radius: 21px;
+    border-radius: 20px;
 
     border: 1px solid var(--border);
 
@@ -826,14 +654,12 @@ main {
     margin-bottom: 10px;
 
     font-size: 20px;
-
-    letter-spacing: -0.5px;
 }
 
 .offer-card h3 {
     margin-bottom: 7px;
 
-    font-size: 17px;
+    font-size: 16px;
 }
 
 .offer-card p {
@@ -851,17 +677,15 @@ main {
 }
 
 
-/* ==================================================
+/* =========================
    AUTH PAGES
-================================================== */
+========================= */
 
 .auth-container {
     min-height: 100vh;
 
     display: flex;
-
     align-items: center;
-
     justify-content: center;
 
     padding: 20px;
@@ -869,7 +693,6 @@ main {
 
 .auth-card {
     width: 100%;
-
     max-width: 420px;
 
     padding: 30px 25px;
@@ -881,7 +704,7 @@ main {
     border: 1px solid var(--border);
 
     box-shadow:
-        0 12px 38px rgba(0, 0, 0, 0.06);
+        0 10px 35px rgba(0, 0, 0, 0.06);
 
     text-align: center;
 }
@@ -895,13 +718,10 @@ main {
     border-radius: 19px;
 
     background: var(--black);
-
     color: white;
 
     display: flex;
-
     align-items: center;
-
     justify-content: center;
 
     font-size: 30px;
@@ -921,7 +741,6 @@ main {
 
 .auth-card form {
     display: flex;
-
     flex-direction: column;
 
     gap: 12px;
@@ -932,9 +751,7 @@ main {
 
     padding: 14px;
 
-    border:
-        1px solid #dcdcd8;
-
+    border: 1px solid #ddd;
     border-radius: 12px;
 
     outline: none;
@@ -961,15 +778,13 @@ main {
 
 .auth-button {
     background: #151515;
-
     color: white;
 }
 
 .secondary-auth-button {
     width: 100%;
 
-    background: #f0f0ed;
-
+    background: #f1f1ee;
     color: #222;
 }
 
@@ -1000,15 +815,15 @@ main {
 }
 
 
-/* ==================================================
+/* =========================
    BOTTOM NAV
-================================================== */
+========================= */
 
 .bottom-nav {
     position: fixed;
 
     left: 50%;
-    bottom: 14px;
+    bottom: 13px;
 
     transform: translateX(-50%);
 
@@ -1022,19 +837,17 @@ main {
 
     padding: 6px;
 
-    background:
-        rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.94);
 
-    border:
-        1px solid rgba(0, 0, 0, 0.07);
+    border: 1px solid rgba(0, 0, 0, 0.07);
 
-    border-radius: 19px;
+    border-radius: 18px;
 
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
 
     box-shadow:
-        0 10px 32px rgba(0, 0, 0, 0.13);
+        0 9px 30px rgba(0, 0, 0, 0.12);
 }
 
 .bottom-nav button {
@@ -1083,28 +896,9 @@ main {
 }
 
 
-/* ==================================================
-   TABLET
-================================================== */
-
-@media (max-width: 700px) {
-
-    main {
-        max-width: 650px;
-
-        padding:
-            30px 20px 30px;
-    }
-
-    #businessList {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-/* ==================================================
+/* =========================
    MOBILE
-================================================== */
+========================= */
 
 @media (max-width: 480px) {
 
@@ -1112,58 +906,26 @@ main {
         padding: 14px 16px;
     }
 
+    main {
+        padding: 27px 16px 25px;
+    }
+
+    .welcome h2 {
+        font-size: 31px;
+    }
+
+    .welcome-text {
+        font-size: 12px;
+    }
+
     .brand-text span {
         display: none;
     }
 
-    main {
-        padding:
-            27px 16px 25px;
-    }
-
-    .hero {
-        padding: 30px 23px;
-
-        border-radius: 24px;
-    }
-
-    .hero h1 {
-        font-size: 32px;
-
-        letter-spacing: -1.3px;
-    }
-
-    .hero p {
-        font-size: 13px;
-    }
-
-    .hero-stats {
-        gap: 7px;
-
-        margin-top: 25px;
-    }
-
-    .stat-card {
-        padding: 12px 10px;
-    }
-
-    .stat-card h3 {
-        font-size: 17px;
-    }
-
-    .stat-card span {
-        font-size: 9px;
-    }
-
-    .search-box {
-        margin-left: 4px;
-        margin-right: 4px;
-    }
-
     .business-card {
-        padding: 15px;
+        padding: 14px;
 
-        border-radius: 18px;
+        border-radius: 17px;
     }
 
     .business-icon {
@@ -1173,38 +935,102 @@ main {
         border-radius: 14px;
     }
 
+    .business-card h3 {
+        font-size: 14px;
+    }
+
     .nearby-badge {
         display: none;
-    }
-
-    .business-section h2 {
-        font-size: 20px;
-    }
-}
-
-
-/* ==================================================
-   SMALL MOBILE
-================================================== */
-
-@media (max-width: 360px) {
-
-    .hero h1 {
-        font-size: 29px;
-    }
-
-    .hero-stats {
-        display: grid;
-
-        grid-template-columns:
-            repeat(3, 1fr);
     }
 
     .tabs button {
         font-size: 11px;
     }
+}
+
+
+@media (max-width: 360px) {
+
+    .welcome h2 {
+        font-size: 28px;
+    }
 
     .tabs button span {
         display: none;
     }
+}
+/* =========================
+   HERO
+========================= */
+
+.hero{
+    background: linear-gradient(
+        135deg,
+        #111827 0%,
+        #1f2937 100%
+    );
+
+    color:white;
+    padding:40px;
+    border-radius:28px;
+    margin-bottom:25px;
+    position:relative;
+    overflow:hidden;
+}
+
+.hero::before{
+    content:"";
+    position:absolute;
+    width:250px;
+    height:250px;
+    background:rgba(255,255,255,0.05);
+    border-radius:50%;
+    top:-100px;
+    right:-100px;
+}
+
+.hero-badge{
+    display:inline-block;
+    background:rgba(255,255,255,0.12);
+    padding:8px 14px;
+    border-radius:999px;
+    margin-bottom:20px;
+    font-size:14px;
+}
+
+.hero h1{
+    font-size:38px;
+    line-height:1.15;
+    margin-bottom:15px;
+}
+
+.hero p{
+    color:#d1d5db;
+    font-size:16px;
+    line-height:1.7;
+    max-width:500px;
+}
+
+.hero-stats{
+    display:flex;
+    gap:15px;
+    margin-top:30px;
+}
+
+.stat-card{
+    flex:1;
+    background:rgba(255,255,255,0.08);
+    padding:18px;
+    border-radius:18px;
+    backdrop-filter:blur(10px);
+}
+
+.stat-card h3{
+    font-size:22px;
+    margin-bottom:5px;
+}
+
+.stat-card span{
+    color:#d1d5db;
+    font-size:13px;
 }

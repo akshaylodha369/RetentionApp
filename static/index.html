@@ -3,18 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>RetentionApp</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/style.css"
-    >
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
@@ -22,25 +15,13 @@
 <header class="top-bar">
 
     <div class="brand">
-
-        <div class="brand-mark">
-            R
-        </div>
+        <div class="brand-mark">R</div>
 
         <div class="brand-text">
-
-            <h1>
-                RetentionApp
-            </h1>
-
-            <span>
-                Your places. Your perks.
-            </span>
-
+            <h1>RetentionApp</h1>
+            <span>Your places. Your perks.</span>
         </div>
-
     </div>
-
 
     <a
         href="/static/profile.html"
@@ -55,86 +36,48 @@
 
 <main>
 
+<section class="hero">
 
-    <!-- =========================
-         HERO
-    ========================== -->
+    <div class="hero-badge">
+        ✦ Discover Nearby
+    </div>
 
-    <section class="hero">
+    <h1>
+        Your favourite places,
+        <br>
+        all in one place.
+    </h1>
 
-        <div class="hero-badge">
-            ✦ Discover Nearby
+    <p>
+        Discover local businesses, follow the ones you love
+        and stay updated with their offers.
+    </p>
+
+    <div class="hero-stats">
+
+        <div class="stat-card">
+            <h3>100+</h3>
+            <span>Businesses</span>
         </div>
 
-
-        <h1>
-            Your favourite places,
-            <br>
-            all in one place.
-        </h1>
-
-
-        <p>
-            Discover local businesses, follow the ones you love
-            and stay updated with their offers.
-        </p>
-
-
-        <div class="hero-stats">
-
-            <div class="stat-card">
-
-                <h3>
-                    100+
-                </h3>
-
-                <span>
-                    Businesses
-                </span>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <h3>
-                    24/7
-                </h3>
-
-                <span>
-                    Offers
-                </span>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <h3>
-                    Near
-                </h3>
-
-                <span>
-                    Your Area
-                </span>
-
-            </div>
-
+        <div class="stat-card">
+            <h3>24/7</h3>
+            <span>Offers</span>
         </div>
 
-    </section>
+        <div class="stat-card">
+            <h3>Near</h3>
+            <span>Your Area</span>
+        </div>
 
+    </div>
 
-    <!-- =========================
-         SEARCH
-    ========================== -->
+</section>
+
 
     <section class="search-box">
 
-        <span class="search-icon">
-            ⌕
-        </span>
-
+        <span class="search-icon">⌕</span>
 
         <input
             type="text"
@@ -146,10 +89,6 @@
     </section>
 
 
-    <!-- =========================
-         CATEGORY FILTERS
-    ========================== -->
-
     <section class="filters">
 
         <button
@@ -160,7 +99,6 @@
             All
         </button>
 
-
         <button
             class="filter-btn"
             data-category="cafe"
@@ -169,7 +107,6 @@
             ☕ Cafes
         </button>
 
-
         <button
             class="filter-btn"
             data-category="restaurant"
@@ -177,7 +114,6 @@
         >
             🍽 Restaurants
         </button>
-
 
         <button
             class="filter-btn"
@@ -190,10 +126,6 @@
     </section>
 
 
-    <!-- =========================
-         TABS
-    ========================== -->
-
     <section class="tabs">
 
         <button
@@ -201,89 +133,57 @@
             class="active"
             type="button"
         >
-            <span>
-                ⌖
-            </span>
-
+            <span>⌖</span>
             Nearby
         </button>
-
 
         <button
             id="followingTab"
             type="button"
         >
-            <span>
-                ♡
-            </span>
-
+            <span>♡</span>
             Following
         </button>
-
 
         <button
             id="offersTab"
             type="button"
         >
-            <span>
-                ✦
-            </span>
-
+            <span>✦</span>
             Offers
         </button>
 
     </section>
 
 
-    <!-- =========================
-         BUSINESS SECTION
-    ========================== -->
-
     <section class="business-section">
 
         <div class="section-heading">
 
             <div>
-
-                <p class="section-eyebrow">
-                    AROUND YOU
-                </p>
-
+                <p class="section-eyebrow">AROUND YOU</p>
 
                 <h2 id="sectionTitle">
                     Nearby Businesses
                 </h2>
-
             </div>
 
-
             <div class="nearby-badge">
-
                 <span></span>
-
                 Nearby
-
             </div>
 
         </div>
 
 
         <div id="businessList">
-
-            <p class="loading-text">
-                Finding places near you...
-            </p>
-
+            <p class="loading-text">Finding places near you...</p>
         </div>
 
     </section>
 
 </main>
 
-
-<!-- =========================
-     BOTTOM NAV
-========================= -->
 
 <nav class="bottom-nav">
 
@@ -293,32 +193,17 @@
         type="button"
         aria-label="Home"
     >
-
-        <span>
-            ⌂
-        </span>
-
-        <small>
-            Home
-        </small>
-
+        <span>⌂</span>
+        <small>Home</small>
     </button>
-
 
     <button
         id="profileNav"
         type="button"
         aria-label="Profile"
     >
-
-        <span>
-            ♙
-        </span>
-
-        <small>
-            Profile
-        </small>
-
+        <span>♙</span>
+        <small>Profile</small>
     </button>
 
 </nav>
