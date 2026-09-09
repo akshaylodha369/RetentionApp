@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -29,7 +28,7 @@
 
             <p id="businessOffer"></p>
 
-            <button id="followButton">
+            <button id="followButton" type="button">
                 ❤️ Follow
             </button>
 
@@ -42,7 +41,7 @@
 
             <p id="offerText">Loading offer...</p>
 
-            <button id="rewardButton">
+            <button id="rewardButton" type="button">
                 Follow & Get Reward
             </button>
 
@@ -53,8 +52,12 @@
 
     <script>
 
-        const params = new URLSearchParams(window.location.search);
-        const businessId = params.get("id");
+        const params =
+            new URLSearchParams(window.location.search);
+
+        const businessId =
+            params.get("id");
+
 
         const businessName =
             document.getElementById("businessName");
@@ -80,11 +83,55 @@
 
         let business = null;
         let following = false;
+        let loggedIn = false;
 
 
-        // =========================
+        // =====================================================
+        // LOAD CURRENT USER
+        // =====================================================
+
+        async function loadCurrentUser() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/me",
+                        {
+                            credentials: "same-origin"
+                        }
+                    );
+
+                if (!response.ok) {
+                    loggedIn = false;
+                    return;
+                }
+
+                const data =
+                    await response.json();
+
+                loggedIn =
+                    data.logged_in === true;
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "USER CHECK ERROR:",
+                    error
+                );
+
+                loggedIn = false;
+
+            }
+
+        }
+
+
+        // =====================================================
         // LOAD BUSINESS
-        // =========================
+        // =====================================================
 
         async function loadBusiness() {
 
@@ -96,49 +143,48 @@
                         "No business ID";
 
                     return;
+
                 }
 
 
                 const response =
-                    await fetch("/api/businesses");
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Failed to load businesses"
-                    );
-
-                }
-
-
-                const businesses =
-                    await response.json();
-
-
-                business =
-                    businesses.find(
-                        item =>
-                            String(item.id) ===
-                            String(businessId)
+                    await fetch(
+                        `/api/businesses/${businessId}`,
+                        {
+                            credentials: "same-origin"
+                        }
                     );
 
 
-                if (!business) {
+                if (response.status === 404) {
 
                     businessName.textContent =
                         "Business not found";
 
                     return;
+
                 }
 
 
-                // =========================
-                // DISPLAY
-                // =========================
+                if (!response.ok) {
+
+                    throw new Error(
+                        `Business request failed: ${response.status}`
+                    );
+
+                }
+
+
+                business =
+                    await response.json();
+
+
+                // =================================================
+                // DISPLAY BUSINESS
+                // =================================================
 
                 businessName.textContent =
-                    business.name;
+                    business.name || "Business";
 
 
                 businessCategory.textContent =
@@ -146,12 +192,22 @@
                     (business.category || "Business");
 
 
-                if (business.distance !== undefined) {
+                if (
+                    business.distance_km !== undefined &&
+                    business.distance_km !== null
+                ) {
 
-                    businessDistance.textContent =
-                        "📍 " +
-                        business.distance +
-                        " km away";
+                    const distance =
+                        Number(
+                            business.distance_km
+                        );
+
+                    if (!Number.isNaN(distance)) {
+
+                        businessDistance.textContent =
+                            `📍 ${distance.toFixed(2)} km away`;
+
+                    }
 
                 } else {
 
@@ -160,22 +216,19 @@
                 }
 
 
-                businessOffer.textContent =
-                    "🎟️ " +
-                    (business.offer ||
-                    "No offer available");
-
-
                 if (business.offer) {
 
+                    businessOffer.textContent =
+                        "🎟️ " +
+                        business.offer;
+
                     offerText.textContent =
-                        "Follow " +
-                        business.name +
-                        " and get " +
-                        business.offer +
-                        " on your next visit.";
+                        `Follow ${business.name} and get ${business.offer} on your next visit.`;
 
                 } else {
+
+                    businessOffer.textContent =
+                        "🎟️ No offer available";
 
                     offerText.textContent =
                         "No current offer available.";
@@ -184,17 +237,32 @@
 
 
                 document.title =
-                    business.name;
+                    business.name || "Business";
 
 
-                // Check follow status
-                await checkFollowStatus();
+                await loadCurrentUser();
+
+
+                if (loggedIn) {
+
+                    await checkFollowStatus();
+
+                } else {
+
+                    following = false;
+
+                    updateButtons();
+
+                }
 
             }
 
             catch (error) {
 
-                console.error(error);
+                console.error(
+                    "BUSINESS LOAD ERROR:",
+                    error
+                );
 
                 businessName.textContent =
                     "Unable to load business";
@@ -204,9 +272,9 @@
         }
 
 
-        // =========================
+        // =====================================================
         // CHECK FOLLOW STATUS
-        // =========================
+        // =====================================================
 
         async function checkFollowStatus() {
 
@@ -214,14 +282,28 @@
 
                 const response =
                     await fetch(
-                        `/api/businesses/${businessId}/follow`
+                        `/api/businesses/${businessId}/follow`,
+                        {
+                            credentials: "same-origin"
+                        }
                     );
+
+
+                if (response.status === 401) {
+
+                    following = false;
+
+                    updateButtons();
+
+                    return;
+
+                }
 
 
                 if (!response.ok) {
 
                     throw new Error(
-                        "Failed to check follow status"
+                        `Follow status failed: ${response.status}`
                     );
 
                 }
@@ -232,194 +314,223 @@
 
 
                 following =
-                    data.following;
+                    data.following === true;
 
 
-                updateFollowButton();
+                updateButtons();
 
             }
 
             catch (error) {
 
-                console.error(error);
+                console.error(
+                    "FOLLOW STATUS ERROR:",
+                    error
+                );
 
             }
 
         }
 
 
-        // =========================
-        // UPDATE BUTTON
-        // =========================
+        // =====================================================
+        // UPDATE BUTTONS
+        // =====================================================
 
-        function updateFollowButton() {
+        function updateButtons() {
 
             if (following) {
 
                 followButton.textContent =
                     "✅ Following";
 
+                rewardButton.textContent =
+                    "🎉 Reward Unlocked";
+
             } else {
 
                 followButton.textContent =
                     "❤️ Follow";
+
+                rewardButton.textContent =
+                    "Follow & Get Reward";
 
             }
 
         }
 
 
-        // =========================
+        // =====================================================
         // FOLLOW / UNFOLLOW
-        // =========================
+        // =====================================================
 
-        followButton.addEventListener(
-            "click",
-            async function () {
+        async function toggleFollow() {
 
-                try {
+            if (!loggedIn) {
 
-                    followButton.disabled = true;
+                alert(
+                    "Please login first to follow this business."
+                );
 
+                window.location.href =
+                    "/static/login.html";
 
-                    const response =
-                        await fetch(
-                            `/api/businesses/${businessId}/follow`,
-                            {
-                                method: "POST"
-                            }
-                        );
-
-
-                    if (!response.ok) {
-
-                        throw new Error(
-                            "Follow request failed"
-                        );
-
-                    }
-
-
-                    const data =
-                        await response.json();
-
-
-                    following =
-                        data.following;
-
-
-                    updateFollowButton();
-
-
-                    // Update reward button
-                    if (following) {
-
-                        rewardButton.textContent =
-                            "🎉 Reward Unlocked";
-
-                    } else {
-
-                        rewardButton.textContent =
-                            "Follow & Get Reward";
-
-                    }
-
-                }
-
-                catch (error) {
-
-                    console.error(error);
-
-                    alert(
-                        "Something went wrong."
-                    );
-
-                }
-
-                finally {
-
-                    followButton.disabled = false;
-
-                }
+                return;
 
             }
-        );
 
 
-        // =========================
-        // REWARD BUTTON
-        // =========================
+            if (!businessId) {
 
-        rewardButton.addEventListener(
-            "click",
-            async function () {
+                alert(
+                    "Business not found."
+                );
 
-                try {
+                return;
 
-                    if (!following) {
-
-                        const response =
-                            await fetch(
-                                `/api/businesses/${businessId}/follow`,
-                                {
-                                    method: "POST"
-                                }
-                            );
+            }
 
 
-                        if (!response.ok) {
+            followButton.disabled = true;
+            rewardButton.disabled = true;
 
-                            throw new Error(
-                                "Follow request failed"
-                            );
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/businesses/${businessId}/follow`,
+                        {
+                            method: "POST",
+                            credentials: "same-origin"
+                        }
+                    );
+
+
+                if (response.status === 401) {
+
+                    loggedIn = false;
+                    following = false;
+
+                    updateButtons();
+
+                    alert(
+                        "Your login session has expired. Please login again."
+                    );
+
+                    window.location.href =
+                        "/static/login.html";
+
+                    return;
+
+                }
+
+
+                if (response.status === 404) {
+
+                    alert(
+                        "Business not found."
+                    );
+
+                    return;
+
+                }
+
+
+                if (!response.ok) {
+
+                    let errorMessage =
+                        "Could not update follow status.";
+
+                    try {
+
+                        const errorData =
+                            await response.json();
+
+                        if (errorData.detail) {
+
+                            errorMessage =
+                                errorData.detail;
 
                         }
 
+                    }
 
-                        const data =
-                            await response.json();
+                    catch (error) {
 
-
-                        following =
-                            data.following;
+                        console.error(
+                            "ERROR RESPONSE PARSE:",
+                            error
+                        );
 
                     }
 
-
-                    updateFollowButton();
-
-
-                    if (following) {
-
-                        rewardButton.textContent =
-                            "🎉 Reward Unlocked";
-
-                    } else {
-
-                        rewardButton.textContent =
-                            "Follow & Get Reward";
-
-                    }
-
-                }
-
-                catch (error) {
-
-                    console.error(error);
-
-                    alert(
-                        "Something went wrong."
+                    throw new Error(
+                        errorMessage
                     );
 
                 }
 
+
+                const data =
+                    await response.json();
+
+
+                following =
+                    data.following === true;
+
+
+                updateButtons();
+
             }
+
+            catch (error) {
+
+                console.error(
+                    "FOLLOW ERROR:",
+                    error
+                );
+
+                alert(
+                    error.message ||
+                    "Could not update follow status."
+                );
+
+            }
+
+            finally {
+
+                followButton.disabled = false;
+                rewardButton.disabled = false;
+
+            }
+
+        }
+
+
+        // =====================================================
+        // FOLLOW BUTTON
+        // =====================================================
+
+        followButton.addEventListener(
+            "click",
+            toggleFollow
         );
 
 
-        // =========================
+        // =====================================================
+        // REWARD BUTTON
+        // =====================================================
+
+        rewardButton.addEventListener(
+            "click",
+            toggleFollow
+        );
+
+
+        // =====================================================
         // START
-        // =========================
+        // =====================================================
 
         loadBusiness();
 
