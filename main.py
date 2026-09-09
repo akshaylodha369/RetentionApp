@@ -1,291 +1,659 @@
-import sqlite3
-import math
+from fastapi import FastAPI, HTTPException, Form, Response, Cookie, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
+import hashlib
+import hmac
+import os
+import secrets
+import time
+import requests
 
-DB_NAME = "retention.db"
+from database import (
+    init_db,
+    get_businesses,
+    add_businesses,
+    get_nearby_businesses,
+    is_following,
+    get_followed_businesses,
+    get_connection,
+    get_user_by_email,
+    get_user_by_id,
+    create_owner,
+    get_owner_businesses,
+    get_business_by_id,
+    update_business_offer,
+    create_session as db_create_session,
+    get_session_user_id,
+    delete_session,
+    delete_expired_sessions,
+)
+
+from config import GOOGLE_PLACES_API_KEY
 
 
 # =========================================================
-# DATABASE CONNECTION
+# APP
 # =========================================================
 
-def get_connection():
-    conn = sqlite3.connect(DB_NAME)
-    return conn
+app = FastAPI()
+
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static"
+)
+
+init_db()
 
 
 # =========================================================
-# INITIALIZE DATABASE
+# SECURITY / PASSWORDS
 # =========================================================
 
-def init_db():
+PASSWORD_ITERATIONS = 100000
 
+SESSION_MAX_AGE = 60 * 60 * 24 * 30
+
+SESSION_COOKIE_NAME = "session"
+
+IS_PRODUCTION = os.environ.get(
+    "RENDER"
+) == "true" or os.environ.get(
+    "ENVIRONMENT",
+    ""
+).lower() == "production"
+
+
+def hash_password(password):
+    salt = secrets.token_bytes(16)
+
+    password_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        PASSWORD_ITERATIONS
+    )
+
+    return salt.hex() + ":" + password_hash.hex()
+
+
+def verify_password(password, stored_hash):
+
+    try:
+
+        salt_hex, hash_hex = stored_hash.split(":", 1)
+
+        salt = bytes.fromhex(salt_hex)
+        expected_hash = bytes.fromhex(hash_hex)
+
+        actual_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            salt,
+            PASSWORD_ITERATIONS
+        )
+
+        return secrets.compare_digest(
+            actual_hash,
+            expected_hash
+        )
+
+    except Exception:
+
+        return False
+
+
+# =========================================================
+# ROLE-AWARE USER LOOKUP
+# =========================================================
+
+def get_user_by_email_and_role(
+    email,
+    role
+):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # =====================================================
-    # USERS
-    # =====================================================
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'customer'
-        )
-    """)
-
-    # =====================================================
-    # BUSINESSES
-    # =====================================================
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS businesses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT,
-            latitude REAL,
-            longitude REAL,
-            address TEXT,
-            offer TEXT,
-            owner_id INTEGER
-        )
-    """)
-
-    # =====================================================
-    # FOLLOWS
-    # =====================================================
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS follows (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            business_id INTEGER NOT NULL,
-            UNIQUE(user_id, business_id)
-        )
-    """)
-
-    # =====================================================
-    # SESSIONS
-    # =====================================================
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            token_hash TEXT NOT NULL UNIQUE,
-            user_id INTEGER NOT NULL,
-            expires_at INTEGER NOT NULL,
-            created_at INTEGER NOT NULL
-        )
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_sessions_token_hash
-        ON sessions(token_hash)
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_sessions_user_id
-        ON sessions(user_id)
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
-        ON sessions(expires_at)
-    """)
-
-    conn.commit()
-    conn.close()
-
-
-# =========================================================
-# GET ALL BUSINESSES
-# =========================================================
-
-def get_businesses():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             name,
-            category,
-            latitude,
-            longitude,
-            address,
-            offer,
-            owner_id
-        FROM businesses
-    """)
+            email,
+            password_hash,
+            role
+        FROM users
+        WHERE email = ?
+        AND role = ?
+        LIMIT 1
+        """,
+        (
+            email,
+            role
+        )
+    )
 
-    businesses = cursor.fetchall()
+    user = cursor.fetchone()
 
     conn.close()
 
-    return businesses
+    return user
 
 
 # =========================================================
-# ADD BUSINESSES
+# SESSION HELPERS
 # =========================================================
 
-def add_businesses(businesses):
+def create_secure_session(
+    user_id
+):
+
+    raw_token = secrets.token_urlsafe(48)
+
+    token_hash = hashlib.sha256(
+        raw_token.encode("utf-8")
+    ).hexdigest()
+
+    now = int(time.time())
+
+    expires_at = now + SESSION_MAX_AGE
+
+    db_create_session(
+        token_hash,
+        user_id,
+        expires_at,
+        now
+    )
+
+    return raw_token
+
+
+def get_current_user(
+    session
+):
+
+    if not session:
+        return None
+
+    token_hash = hashlib.sha256(
+        session.encode("utf-8")
+    ).hexdigest()
+
+    user_id = get_session_user_id(
+        token_hash,
+        int(time.time())
+    )
+
+    if not user_id:
+        return None
+
+    return get_user_by_id(
+        user_id
+    )
+
+
+def require_login(
+    session
+):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Please login first."
+        )
+
+    return user
+
+
+def require_owner(
+    session
+):
+
+    user = require_login(
+        session
+    )
+
+    if user[3] != "owner":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Owner access required."
+        )
+
+    return user
+
+
+def set_session_cookie(
+    response,
+    token
+):
+
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=IS_PRODUCTION,
+        max_age=SESSION_MAX_AGE,
+        path="/"
+    )
+
+
+# =========================================================
+# HOME
+# =========================================================
+
+@app.get("/")
+def home():
+
+    return FileResponse(
+        "static/index.html"
+    )
+
+
+# =========================================================
+# CUSTOMER SIGNUP
+# =========================================================
+
+@app.post("/api/signup")
+def signup(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    name = name.strip()
+    email = email.strip().lower()
+
+    if not name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Name is required."
+        )
+
+    if not email:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email is required."
+        )
+
+    if len(password) < 6:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters."
+        )
+
+    existing_customer = get_user_by_email_and_role(
+        email,
+        "customer"
+    )
+
+    if existing_customer:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Customer account already exists for this email."
+        )
+
+    password_hash = hash_password(
+        password
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    added = 0
+    try:
 
-    for business in businesses:
-
-        if len(business) < 7:
-            continue
-
-        name = business[0]
-        category = business[1]
-        latitude = business[2]
-        longitude = business[3]
-        address = business[4]
-        offer = business[5]
-        owner_id = business[6]
-
-        cursor.execute("""
-            SELECT id
-            FROM businesses
-            WHERE name = ?
-            AND address = ?
-        """, (
-            name,
-            address
-        ))
-
-        existing = cursor.fetchone()
-
-        if existing:
-            continue
-
-        cursor.execute("""
-            INSERT INTO businesses
+        cursor.execute(
+            """
+            INSERT INTO users
             (
                 name,
-                category,
-                latitude,
-                longitude,
-                address,
-                offer,
-                owner_id
+                email,
+                password_hash,
+                role
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            name,
-            category,
-            latitude,
-            longitude,
-            address,
-            offer,
-            owner_id
-        ))
+            VALUES (?, ?, ?, 'customer')
+            """,
+            (
+                name,
+                email,
+                password_hash
+            )
+        )
 
-        added += 1
+        user_id = cursor.lastrowid
 
-    conn.commit()
-    conn.close()
+        conn.commit()
 
-    return added
+    except Exception:
 
+        conn.rollback()
+        conn.close()
 
-# =========================================================
-# HAVERSINE DISTANCE
-# =========================================================
-
-def calculate_distance_km(
-    lat1,
-    lon1,
-    lat2,
-    lon2
-):
-
-    earth_radius_km = 6371.0
-
-    lat1_rad = math.radians(float(lat1))
-    lat2_rad = math.radians(float(lat2))
-
-    delta_lat = math.radians(
-        float(lat2) - float(lat1)
-    )
-
-    delta_lon = math.radians(
-        float(lon2) - float(lon1)
-    )
-
-    a = (
-        math.sin(delta_lat / 2) ** 2
-        +
-        math.cos(lat1_rad)
-        *
-        math.cos(lat2_rad)
-        *
-        math.sin(delta_lon / 2) ** 2
-    )
-
-    c = 2 * math.atan2(
-        math.sqrt(a),
-        math.sqrt(1 - a)
-    )
-
-    return earth_radius_km * c
-
-
-# =========================================================
-# GET NEARBY BUSINESSES
-# =========================================================
-
-def get_nearby_businesses(
-    latitude,
-    longitude,
-    radius_km=5.0
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            category,
-            latitude,
-            longitude,
-            address,
-            offer,
-            owner_id
-        FROM businesses
-        WHERE latitude IS NOT NULL
-        AND longitude IS NOT NULL
-    """)
-
-    businesses = cursor.fetchall()
+        raise HTTPException(
+            status_code=400,
+            detail="Could not create customer account."
+        )
 
     conn.close()
 
-    nearby = []
+    return {
+        "success": True,
+        "user_id": user_id,
+        "role": "customer"
+    }
 
-    for business in businesses:
 
-        business_latitude = business[3]
-        business_longitude = business[4]
+# =========================================================
+# CUSTOMER LOGIN
+# =========================================================
+
+@app.post("/api/login")
+def login(
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    email = email.strip().lower()
+
+    user = get_user_by_email_and_role(
+        email,
+        "customer"
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid customer email or password."
+        )
+
+    if not verify_password(
+        password,
+        user[3]
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid customer email or password."
+        )
+
+    token = create_secure_session(
+        user[0]
+    )
+
+    set_session_cookie(
+        response,
+        token
+    )
+
+    return {
+        "success": True,
+        "user": {
+            "id": user[0],
+            "name": user[1],
+            "email": user[2],
+            "role": user[4]
+        }
+    }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
+
+@app.get("/api/me")
+def me(
+    session: str | None = Cookie(default=None)
+):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+
+        return {
+            "logged_in": False
+        }
+
+    return {
+        "logged_in": True,
+        "user": {
+            "id": user[0],
+            "name": user[1],
+            "email": user[2],
+            "role": user[3]
+        }
+    }
+
+
+# =========================================================
+# LOGOUT
+# =========================================================
+
+@app.post("/api/logout")
+def logout(
+    response: Response,
+    session: str | None = Cookie(default=None)
+):
+
+    if session:
+
+        token_hash = hashlib.sha256(
+            session.encode("utf-8")
+        ).hexdigest()
+
+        delete_session(
+            token_hash
+        )
+
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/"
+    )
+
+    return {
+        "success": True
+    }
+
+
+# =========================================================
+# ALL BUSINESSES
+# =========================================================
+
+@app.get("/api/businesses")
+def businesses():
+
+    rows = get_businesses()
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7]
+        }
+        for row in rows
+    ]
+
+
+# =========================================================
+# BUSINESS BY ID
+# =========================================================
+
+@app.get("/api/businesses/{business_id}")
+def business_detail(
+    business_id: int
+):
+
+    row = get_business_by_id(
+        business_id
+    )
+
+    if not row:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
+        )
+
+    return {
+        "id": row[0],
+        "name": row[1],
+        "category": row[2],
+        "latitude": row[3],
+        "longitude": row[4],
+        "address": row[5],
+        "offer": row[6],
+        "owner_id": row[7]
+    }
+
+
+# =========================================================
+# ONE-TIME BUSINESS MIGRATION
+# =========================================================
+
+@app.post("/api/admin/migrate-businesses")
+async def migrate_businesses(
+    request: Request
+):
+
+    migration_secret = os.environ.get(
+        "BUSINESS_MIGRATION_SECRET"
+    )
+
+    provided_secret = request.headers.get(
+        "X-Migration-Secret"
+    )
+
+    if (
+        not migration_secret
+        or not provided_secret
+        or not hmac.compare_digest(
+            provided_secret,
+            migration_secret
+        )
+    ):
+
+        raise HTTPException(
+            status_code=404,
+            detail="Not found."
+        )
+
+    content_length = request.headers.get(
+        "content-length"
+    )
+
+    if content_length:
 
         try:
 
-            distance_km = calculate_distance_km(
-                latitude,
-                longitude,
-                business_latitude,
-                business_longitude
+            if int(content_length) > 1_000_000:
+
+                raise HTTPException(
+                    status_code=413,
+                    detail="Migration payload too large."
+                )
+
+        except ValueError:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid content length."
+            )
+
+    try:
+
+        body = await request.json()
+
+    except Exception:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid JSON payload."
+        )
+
+    businesses_data = body.get(
+        "businesses"
+    )
+
+    if not isinstance(
+        businesses_data,
+        list
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Businesses list is required."
+        )
+
+    if len(businesses_data) > 500:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Too many businesses."
+        )
+
+    cleaned = []
+
+    for item in businesses_data:
+
+        if not isinstance(
+            item,
+            dict
+        ):
+            continue
+
+        name = str(
+            item.get("name", "")
+        ).strip()
+
+        category = str(
+            item.get("category", "shop")
+        ).strip().lower()
+
+        address = str(
+            item.get("address", "")
+        ).strip()
+
+        offer_value = item.get(
+            "offer"
+        )
+
+        if offer_value is None:
+
+            offer = ""
+
+        else:
+
+            offer = str(
+                offer_value
+            ).strip()[:500]
+
+        try:
+
+            latitude = float(
+                item.get("latitude")
+            )
+
+            longitude = float(
+                item.get("longitude")
             )
 
         except (
@@ -295,459 +663,889 @@ def get_nearby_businesses(
 
             continue
 
-        if distance_km <= radius_km:
+        if not name:
+            continue
 
-            nearby.append(
+        if not (
+            -90 <= latitude <= 90
+        ):
+            continue
+
+        if not (
+            -180 <= longitude <= 180
+        ):
+            continue
+
+        if category not in (
+            "cafe",
+            "restaurant",
+            "shop"
+        ):
+
+            category = "shop"
+
+        cleaned.append(
+            (
+                name,
+                category,
+                latitude,
+                longitude,
+                address,
+                offer,
+                None
+            )
+        )
+
+    if not cleaned:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No valid businesses found."
+        )
+
+    added = add_businesses(
+        cleaned
+    )
+
+    print(
+        f"BUSINESS MIGRATION | "
+        f"received={len(businesses_data)} | "
+        f"valid={len(cleaned)} | "
+        f"added={added}"
+    )
+
+    return {
+        "success": True,
+        "received": len(businesses_data),
+        "valid": len(cleaned),
+        "added": added
+    }
+
+
+# =========================================================
+# NEARBY BUSINESSES
+# =========================================================
+
+@app.get("/api/nearby")
+def nearby(
+    lat: float,
+    lng: float
+):
+
+    if not -90 <= lat <= 90:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid latitude."
+        )
+
+    if not -180 <= lng <= 180:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid longitude."
+        )
+
+    cached_rows = get_nearby_businesses(
+        lat,
+        lng,
+        radius_km=3.0
+    )
+
+    if cached_rows:
+
+        print(
+            f"NEARBY CACHE HIT | "
+            f"results={len(cached_rows)}"
+        )
+
+        return [
+            {
+                "id": row[0],
+                "name": row[1],
+                "category": row[2],
+                "latitude": row[3],
+                "longitude": row[4],
+                "address": row[5],
+                "offer": row[6],
+                "owner_id": row[7],
+                "distance_km": round(
+                    distance_km,
+                    2
+                )
+            }
+            for row, distance_km in cached_rows
+        ]
+
+    print(
+        "NEARBY CACHE MISS | "
+        "No businesses found in database."
+    )
+
+    if not GOOGLE_PLACES_API_KEY:
+
+        raise HTTPException(
+            status_code=500,
+            detail="Google Places API key is not configured."
+        )
+
+    url = (
+        "https://places.googleapis.com/v1/"
+        "places:searchNearby"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,"
+            "places.displayName,"
+            "places.formattedAddress,"
+            "places.location,"
+            "places.types"
+        )
+    }
+
+    payload = {
+        "includedTypes": [
+            "cafe",
+            "restaurant",
+            "store"
+        ],
+        "maxResultCount": 20,
+        "rankPreference": "DISTANCE",
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": lat,
+                    "longitude": lng
+                },
+                "radius": 3000.0
+            }
+        }
+    }
+
+    found = []
+    seen = set()
+
+    try:
+
+        result = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+
+        if not result.ok:
+
+            safe_error = result.text[:1000]
+
+            print(
+                f"GOOGLE PLACES ERROR | "
+                f"status={result.status_code} | "
+                f"response={safe_error}"
+            )
+
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Google Places API request failed.",
+                    "google_status": result.status_code
+                }
+            )
+
+        data = result.json()
+
+        places = data.get(
+            "places",
+            []
+        )
+
+        print(
+            f"GOOGLE PLACES SUCCESS | "
+            f"results={len(places)}"
+        )
+
+    except HTTPException:
+
+        raise
+
+    except requests.RequestException as error:
+
+        print(
+            f"GOOGLE PLACES REQUEST ERROR | "
+            f"error={error}"
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Google Places request failed."
+        )
+
+    except ValueError:
+
+        print(
+            "GOOGLE PLACES JSON ERROR"
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Google returned an invalid response."
+        )
+
+    for place in places:
+
+        place_id = place.get(
+            "id"
+        )
+
+        if not place_id:
+            continue
+
+        if place_id in seen:
+            continue
+
+        seen.add(
+            place_id
+        )
+
+        display_name = (
+            place.get("displayName")
+            or {}
+        )
+
+        name = display_name.get(
+            "text",
+            "Unnamed Business"
+        )
+
+        location = (
+            place.get("location")
+            or {}
+        )
+
+        latitude = location.get(
+            "latitude"
+        )
+
+        longitude = location.get(
+            "longitude"
+        )
+
+        address = place.get(
+            "formattedAddress",
+            ""
+        )
+
+        if (
+            latitude is None
+            or longitude is None
+        ):
+            continue
+
+        google_types = place.get(
+            "types",
+            []
+        )
+
+        if "cafe" in google_types:
+
+            category = "cafe"
+
+        elif "restaurant" in google_types:
+
+            category = "restaurant"
+
+        elif "store" in google_types:
+
+            category = "shop"
+
+        else:
+
+            category = "shop"
+
+        found.append(
+            (
+                name,
+                category,
+                latitude,
+                longitude,
+                address,
+                "",
+                None
+            )
+        )
+
+    print(
+        f"NEARBY GOOGLE RESULTS | "
+        f"found={len(found)}"
+    )
+
+    if found:
+
+        added = add_businesses(
+            found
+        )
+
+        print(
+            f"NEARBY DATABASE SAVE | "
+            f"added={added}"
+        )
+
+    nearby_rows = get_nearby_businesses(
+        lat,
+        lng,
+        radius_km=3.0
+    )
+
+    print(
+        f"NEARBY FINAL | "
+        f"results={len(nearby_rows)}"
+    )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7],
+            "distance_km": round(
+                distance_km,
+                2
+            )
+        }
+        for row, distance_km in nearby_rows
+    ]
+
+
+# =========================================================
+# LOAD BUSINESSES
+# =========================================================
+
+@app.get("/api/load-businesses")
+def load_businesses():
+
+    if not GOOGLE_PLACES_API_KEY:
+
+        raise HTTPException(
+            status_code=500,
+            detail="Google Places API key is not configured."
+        )
+
+    url = (
+        "https://places.googleapis.com/v1/"
+        "places:searchText"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,"
+            "places.displayName,"
+            "places.formattedAddress,"
+            "places.location"
+        )
+    }
+
+    queries = [
+        "cafes in Huzurganj Madhya Pradesh",
+        "restaurants in Huzurganj Madhya Pradesh",
+        "shops in Huzurganj Madhya Pradesh"
+    ]
+
+    found = []
+
+    for query in queries:
+
+        payload = {
+            "textQuery": query,
+            "maxResultCount": 20
+        }
+
+        try:
+
+            result = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=15
+            )
+
+            if not result.ok:
+                continue
+
+            places = result.json().get(
+                "places",
+                []
+            )
+
+        except requests.RequestException:
+
+            continue
+
+        for place in places:
+
+            display_name = (
+                place.get("displayName")
+                or {}
+            )
+
+            location = (
+                place.get("location")
+                or {}
+            )
+
+            name = display_name.get(
+                "text",
+                "Unnamed Business"
+            )
+
+            latitude = location.get(
+                "latitude"
+            )
+
+            longitude = location.get(
+                "longitude"
+            )
+
+            address = place.get(
+                "formattedAddress",
+                ""
+            )
+
+            if (
+                latitude is None
+                or longitude is None
+            ):
+                continue
+
+            category = "shop"
+
+            query_lower = query.lower()
+
+            if "cafe" in query_lower:
+
+                category = "cafe"
+
+            elif "restaurant" in query_lower:
+
+                category = "restaurant"
+
+            found.append(
                 (
-                    business,
-                    distance_km
+                    name,
+                    category,
+                    latitude,
+                    longitude,
+                    address,
+                    "",
+                    None
                 )
             )
 
-    nearby.sort(
-        key=lambda item: item[1]
+    added = add_businesses(
+        found
     )
 
-    return nearby
+    return {
+        "success": True,
+        "added": added
+    }
 
 
 # =========================================================
-# FOLLOW BUSINESS
+# FOLLOW / UNFOLLOW
 # =========================================================
 
-def follow_business(
-    user_id,
-    business_id
+@app.post("/api/businesses/{business_id}/follow")
+def toggle_follow(
+    business_id: int,
+    session: str | None = Cookie(default=None)
 ):
+
+    user = require_login(
+        session
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT OR IGNORE INTO follows
-        (
-            user_id,
-            business_id
-        )
-        VALUES (?, ?)
-    """, (
-        user_id,
-        business_id
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-# =========================================================
-# UNFOLLOW BUSINESS
-# =========================================================
-
-def unfollow_business(
-    user_id,
-    business_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        DELETE FROM follows
-        WHERE user_id = ?
-        AND business_id = ?
-    """, (
-        user_id,
-        business_id
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-# =========================================================
-# CHECK FOLLOW STATUS
-# =========================================================
-
-def is_following(
-    user_id,
-    business_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT id
-        FROM follows
-        WHERE user_id = ?
-        AND business_id = ?
-    """, (
-        user_id,
-        business_id
-    ))
-
-    result = cursor.fetchone()
-
-    conn.close()
-
-    return result is not None
-
-
-# =========================================================
-# GET FOLLOWED BUSINESSES
-# =========================================================
-
-def get_followed_businesses(
-    user_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            b.id,
-            b.name,
-            b.category,
-            b.latitude,
-            b.longitude,
-            b.address,
-            b.offer,
-            b.owner_id
-        FROM businesses b
-        INNER JOIN follows f
-            ON b.id = f.business_id
-        WHERE f.user_id = ?
-    """, (
-        user_id,
-    ))
-
-    businesses = cursor.fetchall()
-
-    conn.close()
-
-    return businesses
-
-
-# =========================================================
-# GET USER BY EMAIL
-# =========================================================
-
-def get_user_by_email(
-    email
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            email,
-            password_hash,
-            role
-        FROM users
-        WHERE email = ?
-    """, (
-        email,
-    ))
-
-    user = cursor.fetchone()
-
-    conn.close()
-
-    return user
-
-
-# =========================================================
-# GET USER BY ID
-# =========================================================
-
-def get_user_by_id(
-    user_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            email,
-            role
-        FROM users
-        WHERE id = ?
-    """, (
-        user_id,
-    ))
-
-    user = cursor.fetchone()
-
-    conn.close()
-
-    return user
-
-
-# =========================================================
-# CREATE OWNER
-# =========================================================
-
-def create_owner(
-    name,
-    email,
-    password_hash
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO users
-        (
-            name,
-            email,
-            password_hash,
-            role
-        )
-        VALUES (?, ?, ?, 'owner')
-    """, (
-        name,
-        email,
-        password_hash
-    ))
-
-    owner_id = cursor.lastrowid
-
-    conn.commit()
-    conn.close()
-
-    return owner_id
-
-
-# =========================================================
-# GET OWNER BUSINESSES
-# =========================================================
-
-def get_owner_businesses(
-    owner_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            category,
-            latitude,
-            longitude,
-            address,
-            offer,
-            owner_id
-        FROM businesses
-        WHERE owner_id = ?
-    """, (
-        owner_id,
-    ))
-
-    businesses = cursor.fetchall()
-
-    conn.close()
-
-    return businesses
-
-
-# =========================================================
-# GET BUSINESS BY ID
-# =========================================================
-
-def get_business_by_id(
-    business_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            category,
-            latitude,
-            longitude,
-            address,
-            offer,
-            owner_id
-        FROM businesses
-        WHERE id = ?
-    """, (
-        business_id,
-    ))
+    cursor.execute(
+        "SELECT id FROM businesses WHERE id=?",
+        (business_id,)
+    )
 
     business = cursor.fetchone()
 
     conn.close()
 
-    return business
+    if not business:
 
-
-# =========================================================
-# ASSIGN BUSINESS TO OWNER
-# =========================================================
-
-def assign_business_to_owner(
-    business_id,
-    owner_id
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE businesses
-        SET owner_id = ?
-        WHERE id = ?
-    """, (
-        owner_id,
-        business_id
-    ))
-
-    conn.commit()
-
-    updated = cursor.rowcount
-
-    conn.close()
-
-    return updated
-
-
-# =========================================================
-# UPDATE OWNER OFFER
-# =========================================================
-
-def update_business_offer(
-    business_id,
-    owner_id,
-    offer
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE businesses
-        SET offer = ?
-        WHERE id = ?
-        AND owner_id = ?
-    """, (
-        offer,
-        business_id,
-        owner_id
-    ))
-
-    conn.commit()
-
-    updated = cursor.rowcount
-
-    conn.close()
-
-    return updated
-
-
-# =========================================================
-# SESSION HELPERS
-# =========================================================
-
-def create_session(
-    token_hash,
-    user_id,
-    expires_at,
-    created_at
-):
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO sessions
-        (
-            token_hash,
-            user_id,
-            expires_at,
-            created_at
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
         )
-        VALUES (?, ?, ?, ?)
-    """, (
-        token_hash,
+
+    user_id = user[0]
+
+    if is_following(
         user_id,
-        expires_at,
-        created_at
-    ))
+        business_id
+    ):
 
-    conn.commit()
-    conn.close()
+        conn = get_connection()
+        cursor = conn.cursor()
 
+        cursor.execute(
+            """
+            DELETE FROM follows
+            WHERE user_id=?
+            AND business_id=?
+            """,
+            (
+                user_id,
+                business_id
+            )
+        )
 
-def get_session_user_id(
-    token_hash,
-    current_time
-):
+        conn.commit()
+        conn.close()
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            user_id
-        FROM sessions
-        WHERE token_hash = ?
-        AND expires_at > ?
-    """, (
-        token_hash,
-        current_time
-    ))
-
-    result = cursor.fetchone()
-
-    conn.close()
-
-    return result[0] if result else None
-
-
-def delete_session(
-    token_hash
-):
+        return {
+            "following": False
+        }
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM sessions
-        WHERE token_hash = ?
-    """, (
-        token_hash
-    ))
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO follows
+        (
+            user_id,
+            business_id
+        )
+        VALUES (?,?)
+        """,
+        (
+            user_id,
+            business_id
+        )
+    )
 
     conn.commit()
     conn.close()
 
+    return {
+        "following": True
+    }
 
-def delete_expired_sessions(
-    current_time
+
+# =========================================================
+# CHECK FOLLOW
+# =========================================================
+
+@app.get("/api/businesses/{business_id}/follow")
+def check_follow(
+    business_id: int,
+    session: str | None = Cookie(default=None)
 ):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+
+        return {
+            "following": False
+        }
+
+    return {
+        "following": is_following(
+            user[0],
+            business_id
+        )
+    }
+
+
+# =========================================================
+# FOLLOWING
+# =========================================================
+
+@app.get("/api/following")
+def following(
+    session: str | None = Cookie(default=None)
+):
+
+    user = require_login(
+        session
+    )
+
+    rows = get_followed_businesses(
+        user[0]
+    )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7]
+        }
+        for row in rows
+    ]
+
+
+# =========================================================
+# OWNER SIGNUP
+# =========================================================
+
+@app.post("/api/owner/signup")
+def owner_signup(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    name = name.strip()
+    email = email.strip().lower()
+
+    if not name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Name is required."
+        )
+
+    if not email:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email is required."
+        )
+
+    if len(password) < 6:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters."
+        )
+
+    existing_owner = get_user_by_email_and_role(
+        email,
+        "owner"
+    )
+
+    if existing_owner:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Owner account already exists for this email."
+        )
+
+    password_hash = hash_password(
+        password
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM sessions
-        WHERE expires_at <= ?
-    """, (
-        current_time
-    ))
+    try:
 
-    conn.commit()
+        cursor.execute(
+            """
+            INSERT INTO users
+            (
+                name,
+                email,
+                password_hash,
+                role
+            )
+            VALUES (?, ?, ?, 'owner')
+            """,
+            (
+                name,
+                email,
+                password_hash
+            )
+        )
+
+        owner_id = cursor.lastrowid
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        conn.close()
+
+        raise HTTPException(
+            status_code=400,
+            detail="Could not create owner account."
+        )
+
     conn.close()
+
+    return {
+        "success": True,
+        "owner_id": owner_id,
+        "role": "owner"
+    }
+
+
+# =========================================================
+# OWNER LOGIN
+# =========================================================
+
+@app.post("/api/owner/login")
+def owner_login(
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    email = email.strip().lower()
+
+    user = get_user_by_email_and_role(
+        email,
+        "owner"
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner email or password."
+        )
+
+    if not verify_password(
+        password,
+        user[3]
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner email or password."
+        )
+
+    token = create_secure_session(
+        user[0]
+    )
+
+    set_session_cookie(
+        response,
+        token
+    )
+
+    return {
+        "success": True,
+        "user": {
+            "id": user[0],
+            "name": user[1],
+            "email": user[2],
+            "role": user[4]
+        }
+    }
+
+
+# =========================================================
+# OWNER BUSINESSES
+# =========================================================
+
+@app.get("/api/owner/businesses")
+def owner_businesses(
+    session: str | None = Cookie(default=None)
+):
+
+    owner = require_owner(
+        session
+    )
+
+    rows = get_owner_businesses(
+        owner[0]
+    )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7]
+        }
+        for row in rows
+    ]
+
+
+# =========================================================
+# OWNER UPDATE OFFER
+# =========================================================
+
+@app.post("/api/businesses/{business_id}/offer")
+def update_offer(
+    business_id: int,
+    offer: str = Form(...),
+    session: str | None = Cookie(default=None)
+):
+
+    owner = require_owner(
+        session
+    )
+
+    offer = offer.strip()
+
+    if len(offer) > 500:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Offer is too long."
+        )
+
+    row = get_business_by_id(
+        business_id
+    )
+
+    if not row:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
+        )
+
+    if row[7] != owner[0]:
+
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to edit this business."
+        )
+
+    updated = update_business_offer(
+        business_id,
+        owner[0],
+        offer
+    )
+
+    if updated == 0:
+
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to edit this business."
+        )
+
+    return {
+        "success": True
+    }

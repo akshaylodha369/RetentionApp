@@ -1,225 +1,1467 @@
-<!DOCTYPE html>
-<html lang="en">
+import hashlib
+import hmac
+import os
+import re
+import secrets
+import time
 
-<head>
+import requests
 
-    <meta charset="UTF-8">
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Request,
+    Response,
+    Cookie,
+)
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-    <title>Login - RetentionApp</title>
+from pydantic import BaseModel, Field
 
-    <link
-        rel="stylesheet"
-        href="/static/style.css"
-    >
+from config import GOOGLE_PLACES_API_KEY
 
-</head>
-
-<body>
-
-<main class="auth-container">
-
-    <div class="auth-card">
-
-        <div class="auth-logo">
-            👤
-        </div>
-
-        <h1>Welcome back</h1>
-
-        <p class="auth-subtitle">
-            Login to discover offers from businesses you love.
-        </p>
-
-        <form id="loginForm">
-
-            <input
-                type="email"
-                id="loginEmail"
-                placeholder="Email"
-                autocomplete="email"
-                required
-            >
-
-            <input
-                type="password"
-                id="loginPassword"
-                placeholder="Password"
-                autocomplete="current-password"
-                required
-            >
-
-            <button
-                type="submit"
-                class="auth-button"
-                id="loginButton"
-            >
-                Login
-            </button>
-
-        </form>
-
-        <p
-            id="loginMessage"
-            class="auth-message"
-        ></p>
-
-        <div class="auth-divider">
-            OR
-        </div>
-
-        <button
-            id="showSignup"
-            class="secondary-auth-button"
-        >
-            Create a new account
-        </button>
-
-        <button
-            id="ownerLogin"
-            class="secondary-auth-button"
-            style="margin-top:10px;"
-        >
-            🏪 Business Owner Login
-        </button>
-
-    </div>
-
-</main>
-
-<script>
-
-const loginForm =
-    document.getElementById("loginForm");
-
-const loginMessage =
-    document.getElementById("loginMessage");
-
-const loginButton =
-    document.getElementById("loginButton");
+from database import (
+    init_db,
+    get_businesses,
+    add_businesses,
+    get_nearby_businesses,
+    is_following,
+    get_followed_businesses,
+    get_connection,
+    get_user_by_email,
+    get_user_by_id,
+    create_user,
+    create_owner,
+    get_owner_businesses,
+    get_business_by_id,
+    assign_business_to_owner,
+    update_business_offer,
+    create_session,
+    get_session_user_id,
+    delete_session,
+    delete_expired_sessions,
+)
 
 
-loginForm.addEventListener(
-    "submit",
-    async function(event) {
+app = FastAPI(
+    title="RetentionApp"
+)
 
-        event.preventDefault();
 
-        const email =
-            document.getElementById("loginEmail")
-                .value
-                .trim()
-                .toLowerCase();
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "https://retentionapp.onrender.com",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        const password =
-            document.getElementById("loginPassword")
-                .value;
 
-        loginButton.disabled = true;
-        loginButton.textContent =
-            "Logging in...";
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static"
+)
 
-        loginMessage.textContent =
-            "Checking your account...";
 
-        try {
+SESSION_COOKIE = "retention_session"
 
-            const formData =
-                new FormData();
+SESSION_DAYS = 30
 
-            formData.append(
-                "email",
-                email
-            );
+PBKDF2_ITERATIONS = 120_000
 
-            formData.append(
-                "password",
-                password
-            );
+MAX_BODY_BYTES = 64 * 1024
 
-            const response =
-                await fetch(
-                    "/api/login",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
 
-            const data =
-                await response.json();
+class OfferUpdate(BaseModel):
+    offer: str = Field(
+        default="",
+        max_length=500
+    )
 
-            if (!response.ok) {
 
-                throw new Error(
-                    data.detail ||
-                    "Invalid email or password."
-                );
+def normalize_email(email: str):
+    return email.strip().lower()
+
+
+def validate_email(email: str):
+
+    if (
+        len(email) > 254
+        or not re.fullmatch(
+            r"[^@\s]+@[^@\s]+\.[^@\s]+",
+            email
+        )
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid email address."
+        )
+
+
+def validate_password(password: str):
+
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters."
+        )
+
+
+def hash_password(password: str):
+
+    salt = secrets.token_hex(16)
+
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        PBKDF2_ITERATIONS,
+    ).hex()
+
+    return (
+        f"pbkdf2_sha256$"
+        f"{PBKDF2_ITERATIONS}$"
+        f"{salt}$"
+        f"{digest}"
+    )
+
+
+def verify_password(
+    password,
+    stored
+):
+
+    try:
+
+        algorithm, iterations, salt, expected = (
+            stored.split("$", 3)
+        )
+
+        if algorithm != "pbkdf2_sha256":
+            return False
+
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            int(iterations),
+        ).hex()
+
+        return hmac.compare_digest(
+            digest,
+            expected
+        )
+
+    except (
+        ValueError,
+        TypeError
+    ):
+        return False
+
+
+def hash_session_token(token: str):
+
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
+
+
+def cookie_is_secure(request: Request):
+
+    return (
+        request.url.scheme == "https"
+        or
+        request.headers.get(
+            "x-forwarded-proto"
+        ) == "https"
+    )
+
+
+def set_session_cookie(
+    response,
+    request,
+    token
+):
+
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        max_age=SESSION_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=cookie_is_secure(request),
+        samesite="lax",
+        path="/",
+    )
+
+
+def clear_session_cookie(response):
+
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/"
+    )
+
+
+def create_secure_session(
+    user_id,
+    response,
+    request
+):
+
+    token = secrets.token_urlsafe(48)
+
+    token_hash = hash_session_token(
+        token
+    )
+
+    now = int(time.time())
+
+    expires_at = (
+        now
+        +
+        SESSION_DAYS * 24 * 60 * 60
+    )
+
+    create_session(
+        token_hash,
+        user_id,
+        expires_at,
+        now
+    )
+
+    set_session_cookie(
+        response,
+        request,
+        token
+    )
+
+
+def get_current_user(session):
+
+    if not session:
+        return None
+
+    token_hash = hash_session_token(
+        session
+    )
+
+    user_id = get_session_user_id(
+        token_hash,
+        int(time.time())
+    )
+
+    if not user_id:
+        return None
+
+    return get_user_by_id(
+        user_id
+    )
+
+
+def require_customer(session):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Please log in as a customer."
+        )
+
+    if user[4] != "customer":
+        raise HTTPException(
+            status_code=403,
+            detail="This is not a customer account."
+        )
+
+    return user
+
+
+def require_owner(session):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Please log in as a business owner."
+        )
+
+    if user[4] != "owner":
+        raise HTTPException(
+            status_code=403,
+            detail="This is not an owner account."
+        )
+
+    return user
+
+
+def delete_old_session(session):
+
+    if session:
+        delete_session(
+            hash_session_token(session)
+        )
+
+
+@app.on_event("startup")
+def startup():
+
+    init_db()
+
+    try:
+        delete_expired_sessions(
+            int(time.time())
+        )
+    except Exception as exc:
+        print(
+            "SESSION CLEANUP ERROR:",
+            exc
+        )
+
+
+@app.middleware("http")
+async def security_middleware(
+    request: Request,
+    call_next
+):
+
+    content_length = request.headers.get(
+        "content-length"
+    )
+
+    if content_length:
+
+        try:
+
+            if int(content_length) > MAX_BODY_BYTES:
+                return Response(
+                    "Request too large.",
+                    status_code=413
+                )
+
+        except ValueError:
+            pass
+
+    if request.method not in (
+        "GET",
+        "HEAD",
+        "OPTIONS"
+    ):
+
+        origin = request.headers.get(
+            "origin"
+        )
+
+        if origin:
+
+            allowed = {
+                "http://127.0.0.1:8000",
+                "http://localhost:8000",
+                "https://retentionapp.onrender.com",
             }
 
-            loginMessage.textContent =
-                "✅ Login successful!";
+            if origin not in allowed:
+                return Response(
+                    "Origin not allowed.",
+                    status_code=403
+                )
 
-            setTimeout(
-                function() {
+    return await call_next(request)
 
-                    window.location.href =
-                        "/";
 
-                },
-                400
-            );
+@app.get("/")
+def home():
 
-        } catch (error) {
+    return FileResponse(
+        "static/index.html"
+    )
 
-            console.error(
-                "Login error:",
-                error
-            );
 
-            loginMessage.textContent =
-                "❌ " + error.message;
+# =========================================================
+# CUSTOMER AUTH
+# =========================================================
 
-            loginButton.disabled = false;
-            loginButton.textContent =
-                "Login";
+@app.post("/api/signup")
+async def customer_signup(
+    request: Request,
+    response: Response
+):
+
+    data = await request.form()
+
+    name = str(
+        data.get("name", "")
+    ).strip()
+
+    email = normalize_email(
+        str(data.get("email", ""))
+    )
+
+    password = str(
+        data.get("password", "")
+    )
+
+    if len(name) < 2 or len(name) > 80:
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter your name."
+        )
+
+    validate_email(email)
+    validate_password(password)
+
+    if get_user_by_email(
+        email,
+        "customer"
+    ):
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A customer account with this email "
+                "already exists. Please log in instead."
+            )
+        )
+
+    try:
+
+        user_id = create_user(
+            name,
+            email,
+            hash_password(password),
+            "customer"
+        )
+
+    except Exception as exc:
+
+        if "UNIQUE" in str(exc).upper():
+
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "A customer account with this email "
+                    "already exists. Please log in instead."
+                )
+            )
+
+        raise
+
+    delete_old_session(
+        request.cookies.get(
+            SESSION_COOKIE
+        )
+    )
+
+    create_secure_session(
+        user_id,
+        response,
+        request
+    )
+
+    return {
+        "success": True,
+        "role": "customer",
+        "redirect": "/",
+    }
+
+
+@app.post("/api/login")
+async def customer_login(
+    request: Request,
+    response: Response
+):
+
+    data = await request.form()
+
+    email = normalize_email(
+        str(data.get("email", ""))
+    )
+
+    password = str(
+        data.get("password", "")
+    )
+
+    validate_email(email)
+
+    user = get_user_by_email(
+        email,
+        "customer"
+    )
+
+    if (
+        not user
+        or
+        not verify_password(
+            password,
+            user[3]
+        )
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid customer email or password."
+        )
+
+    delete_old_session(
+        request.cookies.get(
+            SESSION_COOKIE
+        )
+    )
+
+    create_secure_session(
+        user[0],
+        response,
+        request
+    )
+
+    return {
+        "success": True,
+        "role": "customer",
+        "redirect": "/",
+    }
+
+
+# =========================================================
+# OWNER AUTH
+# =========================================================
+
+@app.post("/api/owner/signup")
+async def owner_signup(
+    request: Request,
+    response: Response
+):
+
+    data = await request.form()
+
+    name = str(
+        data.get("name", "")
+    ).strip()
+
+    email = normalize_email(
+        str(data.get("email", ""))
+    )
+
+    password = str(
+        data.get("password", "")
+    )
+
+    if len(name) < 2 or len(name) > 80:
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter your name."
+        )
+
+    validate_email(email)
+    validate_password(password)
+
+    if get_user_by_email(
+        email,
+        "owner"
+    ):
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "An owner account with this email "
+                "already exists. Please log in instead."
+            )
+        )
+
+    try:
+
+        user_id = create_owner(
+            name,
+            email,
+            hash_password(password)
+        )
+
+    except Exception as exc:
+
+        if "UNIQUE" in str(exc).upper():
+
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "An owner account with this email "
+                    "already exists. Please log in instead."
+                )
+            )
+
+        raise
+
+    delete_old_session(
+        request.cookies.get(
+            SESSION_COOKIE
+        )
+    )
+
+    create_secure_session(
+        user_id,
+        response,
+        request
+    )
+
+    return {
+        "success": True,
+        "role": "owner",
+        "redirect": "/static/owner-dashboard.html",
+    }
+
+
+@app.post("/api/owner/login")
+async def owner_login(
+    request: Request,
+    response: Response
+):
+
+    data = await request.form()
+
+    email = normalize_email(
+        str(data.get("email", ""))
+    )
+
+    password = str(
+        data.get("password", "")
+    )
+
+    validate_email(email)
+
+    user = get_user_by_email(
+        email,
+        "owner"
+    )
+
+    if (
+        not user
+        or
+        not verify_password(
+            password,
+            user[3]
+        )
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid owner email or password."
+        )
+
+    delete_old_session(
+        request.cookies.get(
+            SESSION_COOKIE
+        )
+    )
+
+    create_secure_session(
+        user[0],
+        response,
+        request
+    )
+
+    return {
+        "success": True,
+        "role": "owner",
+        "redirect": "/static/owner-dashboard.html",
+    }
+
+
+# =========================================================
+# SESSION
+# =========================================================
+
+@app.get("/api/me")
+def me(
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    user = get_current_user(
+        session
+    )
+
+    if not user:
+
+        return {
+            "logged_in": False
         }
 
+    return {
+        "logged_in": True,
+        "id": user[0],
+        "name": user[1],
+        "email": user[2],
+        "role": user[4],
     }
-);
 
 
-document.getElementById(
-    "showSignup"
-).addEventListener(
-    "click",
-    function() {
+@app.post("/api/logout")
+def logout(
+    request: Request,
+    response: Response
+):
 
-        window.location.href =
-            "/static/signup.html";
+    session = request.cookies.get(
+        SESSION_COOKIE
+    )
 
+    if session:
+
+        delete_session(
+            hash_session_token(
+                session
+            )
+        )
+
+    clear_session_cookie(
+        response
+    )
+
+    return {
+        "success": True
     }
-);
 
 
-document.getElementById(
-    "ownerLogin"
-).addEventListener(
-    "click",
-    function() {
+# =========================================================
+# CUSTOMER
+# =========================================================
 
-        window.location.href =
-            "/static/owner-login.html";
+@app.get("/api/businesses")
+def businesses():
 
+    rows = get_businesses()
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7],
+        }
+        for row in rows
+    ]
+
+
+@app.get("/api/businesses/{business_id}")
+def business_detail(
+    business_id: int
+):
+
+    row = get_business_by_id(
+        business_id
+    )
+
+    if not row:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
+        )
+
+    return {
+        "id": row[0],
+        "name": row[1],
+        "category": row[2],
+        "latitude": row[3],
+        "longitude": row[4],
+        "address": row[5],
+        "offer": row[6],
+        "owner_id": row[7],
     }
-);
 
-</script>
 
-</body>
+@app.get("/api/nearby")
+def nearby(
+    lat: float,
+    lng: float
+):
 
-</html>
+    cached = get_nearby_businesses(
+        lat,
+        lng,
+        radius_km=3.0
+    )
+
+    if (
+        not cached
+        and
+        GOOGLE_PLACES_API_KEY
+    ):
+
+        url = (
+            "https://places.googleapis.com/"
+            "v1/places:searchNearby"
+        )
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key":
+                GOOGLE_PLACES_API_KEY,
+            "X-Goog-FieldMask": (
+                "places.id,"
+                "places.displayName,"
+                "places.types,"
+                "places.location,"
+                "places.formattedAddress"
+            ),
+        }
+
+        payload = {
+            "includedTypes": [
+                "cafe",
+                "restaurant",
+                "store"
+            ],
+            "maxResultCount": 20,
+            "rankPreference": "DISTANCE",
+            "locationRestriction": {
+                "circle": {
+                    "center": {
+                        "latitude": lat,
+                        "longitude": lng
+                    },
+                    "radius": 3000.0
+                }
+            }
+        }
+
+        try:
+
+            r = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=12
+            )
+
+            if r.ok:
+
+                places = r.json().get(
+                    "places",
+                    []
+                )
+
+                to_add = []
+
+                for place in places:
+
+                    location = (
+                        place.get("location")
+                        or {}
+                    )
+
+                    display = (
+                        place.get("displayName")
+                        or {}
+                    )
+
+                    name = display.get(
+                        "text"
+                    )
+
+                    if not name:
+                        continue
+
+                    types = (
+                        place.get("types")
+                        or []
+                    )
+
+                    if "cafe" in types:
+                        category = "cafe"
+                    elif "restaurant" in types:
+                        category = "restaurant"
+                    else:
+                        category = "shop"
+
+                    to_add.append({
+                        "name": name,
+                        "category": category,
+                        "latitude":
+                            location.get(
+                                "latitude"
+                            ),
+                        "longitude":
+                            location.get(
+                                "longitude"
+                            ),
+                        "address":
+                            place.get(
+                                "formattedAddress"
+                            ) or "",
+                        "offer": "",
+                    })
+
+                if to_add:
+                    add_businesses(
+                        to_add
+                    )
+
+                cached = get_nearby_businesses(
+                    lat,
+                    lng,
+                    radius_km=3.0
+                )
+
+            else:
+
+                print(
+                    "GOOGLE NEARBY ERROR:",
+                    r.status_code,
+                    r.text[:500]
+                )
+
+        except requests.RequestException as exc:
+
+            print(
+                "GOOGLE NEARBY REQUEST ERROR:",
+                exc
+            )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7],
+            "distance_km": distance,
+        }
+        for row, distance in cached
+    ]
+
+
+@app.get("/api/following")
+def following(
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    user = require_customer(
+        session
+    )
+
+    rows = get_followed_businesses(
+        user[0]
+    )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7],
+        }
+        for row in rows
+    ]
+
+
+@app.post(
+    "/api/businesses/{business_id}/follow"
+)
+def toggle_follow(
+    business_id: int,
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    user = require_customer(
+        session
+    )
+
+    if not get_business_by_id(
+        business_id
+    ):
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
+        )
+
+    conn = get_connection()
+
+    try:
+
+        cur = conn.cursor()
+
+        if is_following(
+            user[0],
+            business_id
+        ):
+
+            cur.execute("""
+                DELETE FROM follows
+                WHERE user_id = ?
+                AND business_id = ?
+            """, (
+                user[0],
+                business_id
+            ))
+
+            conn.commit()
+
+            return {
+                "following": False
+            }
+
+        cur.execute("""
+            INSERT OR IGNORE INTO follows
+            (user_id, business_id)
+            VALUES (?, ?)
+        """, (
+            user[0],
+            business_id
+        ))
+
+        conn.commit()
+
+        return {
+            "following": True
+        }
+
+    finally:
+        conn.close()
+
+
+@app.get(
+    "/api/businesses/{business_id}/follow"
+)
+def check_follow(
+    business_id: int,
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    user = get_current_user(
+        session
+    )
+
+    if (
+        not user
+        or
+        user[4] != "customer"
+    ):
+
+        return {
+            "following": False
+        }
+
+    return {
+        "following": is_following(
+            user[0],
+            business_id
+        )
+    }
+
+
+# =========================================================
+# OWNER
+# =========================================================
+
+@app.get("/api/owner/businesses")
+def owner_businesses(
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    owner = require_owner(
+        session
+    )
+
+    rows = get_owner_businesses(
+        owner[0]
+    )
+
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+            "latitude": row[3],
+            "longitude": row[4],
+            "address": row[5],
+            "offer": row[6],
+            "owner_id": row[7],
+        }
+        for row in rows
+    ]
+
+
+@app.post(
+    "/api/owner/businesses/{business_id}/claim"
+)
+def claim_business(
+    business_id: int,
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    owner = require_owner(
+        session
+    )
+
+    business = get_business_by_id(
+        business_id
+    )
+
+    if not business:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found."
+        )
+
+    if business[7] is not None:
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This business is already "
+                "claimed by another owner."
+            )
+        )
+
+    if not assign_business_to_owner(
+        business_id,
+        owner[0]
+    ):
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This business was just "
+                "claimed by another owner."
+            )
+        )
+
+    return {
+        "success": True
+    }
+
+
+@app.put(
+    "/api/owner/businesses/{business_id}/offer"
+)
+def owner_offer(
+    business_id: int,
+    payload: OfferUpdate,
+    session: str | None = Cookie(
+        default=None
+    )
+):
+
+    owner = require_owner(
+        session
+    )
+
+    if len(payload.offer.strip()) > 500:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Offer is too long."
+        )
+
+    if not update_business_offer(
+        business_id,
+        owner[0],
+        payload.offer
+    ):
+
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this business."
+        )
+
+    return {
+        "success": True,
+        "offer": payload.offer.strip()
+    }
+
+
+# =========================================================
+# GOOGLE BUSINESS LOADING
+# =========================================================
+
+@app.post("/api/load-businesses")
+def load_businesses():
+
+    if not GOOGLE_PLACES_API_KEY:
+
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Google Places API key "
+                "is not configured."
+            )
+        )
+
+    queries = [
+        "cafes in Huzurganj Madhya Pradesh",
+        "restaurants in Huzurganj Madhya Pradesh",
+        "shops in Huzurganj Madhya Pradesh",
+    ]
+
+    url = (
+        "https://places.googleapis.com/"
+        "v1/places:searchText"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key":
+            GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,"
+            "places.displayName,"
+            "places.types,"
+            "places.location,"
+            "places.formattedAddress"
+        ),
+    }
+
+    all_businesses = []
+
+    for query in queries:
+
+        try:
+
+            r = requests.post(
+                url,
+                headers=headers,
+                json={
+                    "textQuery": query,
+                    "pageSize": 20
+                },
+                timeout=12
+            )
+
+            if not r.ok:
+
+                print(
+                    "GOOGLE TEXT ERROR:",
+                    r.status_code,
+                    r.text[:500]
+                )
+
+                continue
+
+            for place in r.json().get(
+                "places",
+                []
+            ):
+
+                location = (
+                    place.get("location")
+                    or {}
+                )
+
+                display = (
+                    place.get("displayName")
+                    or {}
+                )
+
+                name = display.get(
+                    "text"
+                )
+
+                if not name:
+                    continue
+
+                types = (
+                    place.get("types")
+                    or []
+                )
+
+                if "cafe" in types:
+                    category = "cafe"
+                elif "restaurant" in types:
+                    category = "restaurant"
+                else:
+                    category = "shop"
+
+                all_businesses.append({
+                    "name": name,
+                    "category": category,
+                    "latitude":
+                        location.get(
+                            "latitude"
+                        ),
+                    "longitude":
+                        location.get(
+                            "longitude"
+                        ),
+                    "address":
+                        place.get(
+                            "formattedAddress"
+                        ) or "",
+                    "offer": "",
+                })
+
+        except requests.RequestException as exc:
+
+            print(
+                "GOOGLE TEXT REQUEST ERROR:",
+                exc
+            )
+
+    added = add_businesses(
+        all_businesses
+    )
+
+    return {
+        "success": True,
+        "found": len(all_businesses),
+        "added": added
+    }
+
+
+# =========================================================
+# MIGRATION
+# =========================================================
+
+@app.post(
+    "/api/admin/migrate-businesses"
+)
+async def migrate_businesses(
+    request: Request
+):
+
+    secret = os.getenv(
+        "BUSINESS_MIGRATION_SECRET",
+        ""
+    )
+
+    provided = request.headers.get(
+        "X-Migration-Secret",
+        ""
+    )
+
+    if (
+        not secret
+        or
+        not hmac.compare_digest(
+            provided,
+            secret
+        )
+    ):
+
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden."
+        )
+
+    payload = await request.json()
+
+    businesses_data = payload.get(
+        "businesses",
+        []
+    )
+
+    if (
+        not isinstance(
+            businesses_data,
+            list
+        )
+        or
+        len(businesses_data) > 500
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid migration payload."
+        )
+
+    cleaned = []
+
+    for business in businesses_data:
+
+        if not isinstance(
+            business,
+            dict
+        ):
+            continue
+
+        name = str(
+            business.get(
+                "name",
+                ""
+            )
+        ).strip()
+
+        if not name:
+            continue
+
+        cleaned.append({
+            "name": name[:200],
+            "category":
+                str(
+                    business.get(
+                        "category",
+                        "other"
+                    )
+                )[:50],
+            "latitude":
+                business.get(
+                    "latitude"
+                ),
+            "longitude":
+                business.get(
+                    "longitude"
+                ),
+            "address":
+                str(
+                    business.get(
+                        "address",
+                        ""
+                    )
+                )[:500],
+            "offer":
+                str(
+                    business.get(
+                        "offer",
+                        ""
+                    )
+                )[:500],
+        })
+
+    added = add_businesses(
+        cleaned
+    )
+
+    return {
+        "success": True,
+        "received":
+            len(businesses_data),
+        "valid":
+            len(cleaned),
+        "added":
+            added,
+    }

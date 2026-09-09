@@ -1,245 +1,682 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta charset="UTF-8">
+<title>Create account — RetentionApp</title>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<style>
+*{box-sizing:border-box}
 
-    <title>Owner Login - RetentionApp</title>
+body{
+    margin:0;
+    min-height:100vh;
 
-    <link
-        rel="stylesheet"
-        href="/static/style.css"
-    >
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 
+    background:
+        radial-gradient(
+            circle at top left,
+            #eef2ff,
+            transparent 45%
+        ),
+        #f8fafc;
+
+    color:#101828;
+}
+
+.page{
+    min-height:100vh;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:24px;
+}
+
+.card{
+    width:min(1000px,100%);
+
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    background:white;
+
+    border-radius:28px;
+    overflow:hidden;
+
+    box-shadow:
+        0 30px 80px rgba(16,24,40,.12);
+}
+
+.left{
+    background:#111827;
+    color:white;
+
+    padding:52px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.logo{
+    font-size:25px;
+    font-weight:800;
+}
+
+.logo span{
+    color:#94a3b8;
+}
+
+.badge{
+    display:inline-block;
+
+    padding:7px 12px;
+    border-radius:999px;
+
+    background:#1f2937;
+    color:#c7d2fe;
+
+    font-size:12px;
+    font-weight:800;
+
+    margin-bottom:20px;
+}
+
+.left-content{
+    max-width:420px;
+}
+
+.left h1{
+    margin:0 0 18px;
+
+    font-size:44px;
+    line-height:1.05;
+
+    letter-spacing:-1.8px;
+}
+
+.left p{
+    color:#cbd5e1;
+    line-height:1.7;
+}
+
+.features{
+    display:grid;
+    gap:12px;
+    margin-top:30px;
+}
+
+.feature{
+    padding:14px 16px;
+
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:14px;
+
+    background:rgba(255,255,255,.05);
+}
+
+.feature strong{
+    display:block;
+    margin-bottom:4px;
+}
+
+.feature small{
+    color:#94a3b8;
+}
+
+.right{
+    padding:52px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.label{
+    display:inline-block;
+
+    width:max-content;
+
+    padding:7px 11px;
+
+    background:#eef2ff;
+    color:#3730a3;
+
+    border-radius:999px;
+
+    font-size:12px;
+    font-weight:800;
+
+    margin-bottom:15px;
+}
+
+h2{
+    margin:0 0 8px;
+
+    font-size:32px;
+    letter-spacing:-1px;
+}
+
+.subtitle{
+    color:#667085;
+    line-height:1.55;
+
+    margin:0 0 25px;
+}
+
+.role-box{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    padding:5px;
+
+    background:#f2f4f7;
+    border-radius:14px;
+
+    margin-bottom:24px;
+}
+
+.role-box a{
+    text-decoration:none;
+    text-align:center;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    color:#667085;
+
+    font-size:14px;
+    font-weight:750;
+}
+
+.role-box a.active{
+    background:white;
+    color:#101828;
+
+    box-shadow:
+        0 2px 8px rgba(16,24,40,.08);
+}
+
+.field{
+    margin-bottom:17px;
+}
+
+label{
+    display:block;
+
+    font-size:13px;
+    font-weight:750;
+
+    margin-bottom:7px;
+}
+
+input{
+    width:100%;
+
+    padding:14px;
+
+    border:1px solid #d0d5dd;
+    border-radius:12px;
+
+    font-size:15px;
+
+    outline:none;
+}
+
+input:focus{
+    border-color:#667085;
+
+    box-shadow:
+        0 0 0 4px rgba(17,24,39,.06);
+}
+
+.password-wrap{
+    position:relative;
+}
+
+.password-wrap input{
+    padding-right:70px;
+}
+
+.show{
+    position:absolute;
+
+    right:10px;
+    top:50%;
+
+    transform:translateY(-50%);
+
+    width:auto;
+
+    border:0;
+    background:none;
+
+    color:#667085;
+
+    font-size:12px;
+    font-weight:800;
+
+    cursor:pointer;
+}
+
+.submit{
+    width:100%;
+
+    border:0;
+    border-radius:12px;
+
+    padding:14px;
+
+    background:#111827;
+    color:white;
+
+    font-size:15px;
+    font-weight:800;
+
+    cursor:pointer;
+}
+
+.submit:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
+.message{
+    min-height:20px;
+
+    margin:0 0 12px;
+
+    font-size:13px;
+    font-weight:700;
+}
+
+.error{color:#b42318}
+.success{color:#067647}
+
+.switch{
+    text-align:center;
+
+    margin-top:20px;
+
+    color:#667085;
+    font-size:14px;
+}
+
+.switch a{
+    color:#111827;
+    font-weight:800;
+    text-decoration:none;
+}
+
+@media(max-width:760px){
+
+    .card{
+        grid-template-columns:1fr;
+    }
+
+    .left{
+        padding:32px;
+    }
+
+    .left h1{
+        font-size:35px;
+    }
+
+    .features{
+        display:none;
+    }
+
+    .right{
+        padding:32px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-<main class="auth-container">
+<div class="page">
 
-    <div class="auth-card">
+<div class="card">
 
-        <div class="auth-logo">
-            🏪
-        </div>
+<section class="left">
 
-        <h1>Business Owner</h1>
+<div class="logo">
+    Retention<span>App</span>
+</div>
 
-        <p class="auth-subtitle">
-            Login to manage your business and offers.
-        </p>
+<div class="left-content">
 
+<div class="badge">
+    CUSTOMER ACCOUNT
+</div>
 
-        <!-- OWNER LOGIN FORM -->
+<h1>
+    Start your RetentionApp journey.
+</h1>
 
-        <form id="ownerLoginForm">
+<p>
+    Create your personal customer account and
+    start following the businesses you actually love.
+</p>
 
-            <input
-                type="email"
-                id="ownerEmail"
-                placeholder="Business owner email"
-                autocomplete="email"
-                required
-            >
+<div class="features">
 
-            <input
-                type="password"
-                id="ownerPassword"
-                placeholder="Password"
-                autocomplete="current-password"
-                required
-            >
+<div class="feature">
+    <strong>Free customer account</strong>
+    <small>
+        Keep your favourite businesses and offers together.
+    </small>
+</div>
 
-            <button
-                type="submit"
-                class="auth-button"
-                id="ownerLoginButton"
-            >
-                Login as Owner
-            </button>
+<div class="feature">
+    <strong>Same email, separate owner account</strong>
+    <small>
+        You can create an owner account with the same email later.
+    </small>
+</div>
 
-        </form>
+</div>
 
+</div>
 
-        <p
-            id="ownerLoginMessage"
-            class="auth-message"
-        ></p>
+<small style="color:#64748b">
+    © RetentionApp
+</small>
 
-
-        <div class="auth-divider">
-            OR
-        </div>
+</section>
 
 
-        <a
-            href="/static/owner-signup.html"
-            class="secondary-auth-button"
-            style="
-                display: block;
-                text-align: center;
-                text-decoration: none;
-            "
-        >
-            Create Owner Account
-        </a>
+<section class="right">
+
+<div class="label">
+    CREATE ACCOUNT
+</div>
+
+<h2>
+    Create your account
+</h2>
+
+<p class="subtitle">
+    Set up your customer account in a few seconds.
+</p>
 
 
-        <button
-            id="backToProfile"
-            class="secondary-auth-button"
-        >
-            ← Back to Profile
-        </button>
+<div class="role-box">
 
-    </div>
+<a
+    class="active"
+    href="/static/signup.html"
+>
+    Customer
+</a>
 
-</main>
+<a
+    href="/static/owner-signup.html"
+>
+    Business Owner
+</a>
+
+</div>
+
+
+<form id="signupForm">
+
+<div class="field">
+
+<label for="name">
+    Full name
+</label>
+
+<input
+    id="name"
+    name="name"
+    type="text"
+    autocomplete="name"
+    placeholder="Your name"
+    minlength="2"
+    maxlength="80"
+    required
+>
+
+</div>
+
+
+<div class="field">
+
+<label for="email">
+    Email address
+</label>
+
+<input
+    id="email"
+    name="email"
+    type="email"
+    autocomplete="email"
+    placeholder="you@example.com"
+    maxlength="254"
+    required
+>
+
+</div>
+
+
+<div class="field">
+
+<label for="password">
+    Password
+</label>
+
+<div class="password-wrap">
+
+<input
+    id="password"
+    name="password"
+    type="password"
+    autocomplete="new-password"
+    placeholder="At least 8 characters"
+    minlength="8"
+    required
+>
+
+<button
+    type="button"
+    class="show"
+    id="showPassword"
+>
+    SHOW
+</button>
+
+</div>
+
+</div>
+
+
+<div
+    id="message"
+    class="message"
+></div>
+
+
+<button
+    class="submit"
+    id="submitBtn"
+    type="submit"
+>
+    Create customer account
+</button>
+
+</form>
+
+
+<div class="switch">
+    Already have a customer account?
+    <a href="/static/login.html">
+        Log in
+    </a>
+</div>
+
+
+<div class="switch" style="margin-top:10px">
+    Are you a business owner?
+    <a href="/static/owner-signup.html">
+        Create owner account
+    </a>
+</div>
+
+</section>
+
+</div>
+
+</div>
 
 
 <script>
 
-const ownerLoginForm =
-    document.getElementById("ownerLoginForm");
+const form =
+    document.getElementById("signupForm");
 
-const ownerLoginMessage =
-    document.getElementById("ownerLoginMessage");
+const message =
+    document.getElementById("message");
 
-const ownerLoginButton =
-    document.getElementById("ownerLoginButton");
+const submitBtn =
+    document.getElementById("submitBtn");
 
-const backToProfile =
-    document.getElementById("backToProfile");
+const password =
+    document.getElementById("password");
 
-
-// =========================
-// OWNER LOGIN
-// =========================
-
-ownerLoginForm.addEventListener(
-    "submit",
-    async function(event) {
-
-        event.preventDefault();
+const showPassword =
+    document.getElementById("showPassword");
 
 
-        const email =
-            document.getElementById(
-                "ownerEmail"
-            ).value
-            .trim()
-            .toLowerCase();
+function showMessage(
+    text,
+    type="error"
+){
+
+    message.textContent = text;
+    message.className =
+        "message " + type;
+}
 
 
-        const password =
-            document.getElementById(
-                "ownerPassword"
-            ).value;
+showPassword.addEventListener(
+    "click",
+    () => {
 
+        const visible =
+            password.type === "text";
 
-        ownerLoginMessage.textContent =
-            "Logging in...";
+        password.type =
+            visible
+            ? "password"
+            : "text";
 
-        ownerLoginButton.disabled = true;
-
-
-        try {
-
-            const formData =
-                new FormData();
-
-            formData.append(
-                "email",
-                email
-            );
-
-            formData.append(
-                "password",
-                password
-            );
-
-
-            const response =
-                await fetch(
-                    "/api/owner/login",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.detail ||
-                    "Owner login failed"
-                );
-
-            }
-
-
-            ownerLoginMessage.textContent =
-                "✅ Owner login successful!";
-
-
-            setTimeout(
-                function() {
-
-                    window.location.href =
-                        "/static/owner-dashboard.html";
-
-                },
-                500
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Owner login error:",
-                error
-            );
-
-
-            ownerLoginMessage.textContent =
-                "❌ " + error.message;
-
-            ownerLoginButton.disabled = false;
-
-        }
-
+        showPassword.textContent =
+            visible
+            ? "SHOW"
+            : "HIDE";
     }
 );
 
 
-// =========================
-// BACK TO PROFILE
-// =========================
+form.addEventListener(
+    "submit",
+    async event => {
 
-backToProfile.addEventListener(
-    "click",
-    function() {
+        event.preventDefault();
 
-        window.location.href =
-            "/static/profile.html";
+        showMessage("");
 
+        submitBtn.disabled = true;
+
+        submitBtn.textContent =
+            "Creating account...";
+
+        const formData =
+            new FormData(form);
+
+        const email =
+            String(
+                formData.get("email") || ""
+            )
+            .trim()
+            .toLowerCase();
+
+        formData.set(
+            "email",
+            email
+        );
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/signup",
+                    {
+                        method:"POST",
+                        body:formData,
+                        credentials:"include"
+                    }
+                );
+
+            let data = {};
+
+            try {
+                data =
+                    await response.json();
+            }
+            catch (_) {}
+
+            if (!response.ok) {
+
+                showMessage(
+                    data.detail ||
+                    "Unable to create account."
+                );
+
+                return;
+            }
+
+            showMessage(
+                "Account created. Opening RetentionApp...",
+                "success"
+            );
+
+            window.location.href =
+                data.redirect || "/";
+
+        }
+        catch(error){
+
+            showMessage(
+                "Unable to connect to RetentionApp."
+            );
+
+        }
+        finally{
+
+            submitBtn.disabled = false;
+
+            submitBtn.textContent =
+                "Create customer account";
+        }
     }
 );
 
 </script>
 
 </body>
-
 </html>

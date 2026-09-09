@@ -1,308 +1,682 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta charset="UTF-8">
+<title>Log in — RetentionApp</title>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<style>
+*{
+    box-sizing:border-box;
+}
 
-    <title>Owner Signup - RetentionApp</title>
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 
-    <link
-        rel="stylesheet"
-        href="/static/style.css"
-    >
+    background:
+        radial-gradient(
+            circle at top left,
+            #eef2ff,
+            transparent 45%
+        ),
+        #f8fafc;
 
+    color:#101828;
+}
+
+.page{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+}
+
+.card{
+    width:min(1000px,100%);
+    min-height:650px;
+
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    background:white;
+    border-radius:28px;
+    overflow:hidden;
+
+    box-shadow:
+        0 30px 80px rgba(16,24,40,.12);
+}
+
+.left{
+    background:#111827;
+    color:white;
+    padding:52px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.logo{
+    font-size:25px;
+    font-weight:800;
+}
+
+.logo span{
+    color:#94a3b8;
+}
+
+.left-content{
+    max-width:420px;
+}
+
+.badge{
+    display:inline-block;
+    padding:7px 12px;
+    border-radius:999px;
+
+    background:#1f2937;
+    color:#c7d2fe;
+
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.4px;
+
+    margin-bottom:20px;
+}
+
+.left h1{
+    margin:0 0 18px;
+
+    font-size:44px;
+    line-height:1.05;
+    letter-spacing:-1.8px;
+}
+
+.left p{
+    color:#cbd5e1;
+    line-height:1.7;
+    font-size:16px;
+}
+
+.points{
+    margin-top:30px;
+    display:grid;
+    gap:12px;
+}
+
+.point{
+    padding:14px 16px;
+
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:14px;
+
+    background:rgba(255,255,255,.05);
+}
+
+.point strong{
+    display:block;
+    margin-bottom:4px;
+}
+
+.point small{
+    color:#94a3b8;
+}
+
+.right{
+    padding:52px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.top{
+    margin-bottom:28px;
+}
+
+.small-label{
+    display:inline-block;
+
+    padding:7px 11px;
+    border-radius:999px;
+
+    background:#eef2ff;
+
+    color:#3730a3;
+
+    font-size:12px;
+    font-weight:800;
+
+    margin-bottom:15px;
+}
+
+.right h2{
+    margin:0 0 8px;
+
+    font-size:32px;
+    letter-spacing:-1px;
+}
+
+.subtitle{
+    margin:0;
+
+    color:#667085;
+    line-height:1.55;
+}
+
+.role-box{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    background:#f2f4f7;
+
+    padding:5px;
+    border-radius:14px;
+
+    margin-bottom:24px;
+}
+
+.role-box a{
+    text-decoration:none;
+    text-align:center;
+
+    padding:12px 8px;
+
+    border-radius:10px;
+
+    color:#667085;
+
+    font-weight:750;
+    font-size:14px;
+}
+
+.role-box a.active{
+    background:white;
+    color:#101828;
+
+    box-shadow:
+        0 2px 8px rgba(16,24,40,.08);
+}
+
+.field{
+    margin-bottom:18px;
+}
+
+label{
+    display:block;
+
+    font-size:13px;
+    font-weight:750;
+
+    margin-bottom:7px;
+}
+
+input{
+    width:100%;
+
+    padding:14px;
+
+    border:1px solid #d0d5dd;
+    border-radius:12px;
+
+    font-size:15px;
+
+    outline:none;
+
+    transition:.15s;
+}
+
+input:focus{
+    border-color:#667085;
+
+    box-shadow:
+        0 0 0 4px rgba(17,24,39,.06);
+}
+
+.password-wrap{
+    position:relative;
+}
+
+.password-wrap input{
+    padding-right:70px;
+}
+
+.show{
+    position:absolute;
+
+    right:10px;
+    top:50%;
+
+    transform:translateY(-50%);
+
+    border:0;
+    background:none;
+
+    color:#667085;
+
+    font-size:12px;
+    font-weight:800;
+
+    cursor:pointer;
+
+    width:auto;
+    padding:6px;
+}
+
+button.submit{
+    width:100%;
+
+    border:0;
+    border-radius:12px;
+
+    padding:14px;
+
+    background:#111827;
+    color:white;
+
+    font-size:15px;
+    font-weight:800;
+
+    cursor:pointer;
+
+    transition:.15s;
+}
+
+button.submit:hover{
+    background:#1f2937;
+}
+
+button.submit:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
+.message{
+    min-height:20px;
+
+    margin:2px 0 12px;
+
+    font-size:13px;
+    font-weight:700;
+}
+
+.error{
+    color:#b42318;
+}
+
+.success{
+    color:#067647;
+}
+
+.switch{
+    margin-top:20px;
+
+    text-align:center;
+
+    color:#667085;
+    font-size:14px;
+}
+
+.switch a{
+    color:#111827;
+    font-weight:800;
+    text-decoration:none;
+}
+
+@media(max-width:760px){
+
+    .card{
+        grid-template-columns:1fr;
+    }
+
+    .left{
+        padding:32px;
+        min-height:auto;
+    }
+
+    .left h1{
+        font-size:35px;
+    }
+
+    .points{
+        display:none;
+    }
+
+    .right{
+        padding:32px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-<main class="auth-container">
+<div class="page">
 
-    <div class="auth-card">
+<div class="card">
 
-        <div class="auth-logo">
-            🏪
-        </div>
+<section class="left">
 
-        <h1>Create Owner Account</h1>
+<div class="logo">
+    Retention<span>App</span>
+</div>
 
-        <p class="auth-subtitle">
-            Create your business owner account.
-        </p>
+<div class="left-content">
 
+<div class="badge">
+    CUSTOMER ACCOUNT
+</div>
 
-        <!-- OWNER SIGNUP FORM -->
+<h1>
+    Your favourite places,
+    all in one place.
+</h1>
 
-        <form id="ownerSignupForm">
+<p>
+    Follow local businesses, discover offers
+    and stay connected with the places you love.
+</p>
 
-            <input
-                type="text"
-                id="ownerName"
-                placeholder="Your name"
-                autocomplete="name"
-                required
-            >
+<div class="points">
 
-            <input
-                type="email"
-                id="ownerEmail"
-                placeholder="Business owner email"
-                autocomplete="email"
-                required
-            >
+<div class="point">
+    <strong>Personalised experience</strong>
+    <small>
+        Your follows and offers stay connected
+        to your customer account.
+    </small>
+</div>
 
-            <input
-                type="password"
-                id="ownerPassword"
-                placeholder="Password (6+ characters)"
-                autocomplete="new-password"
-                minlength="6"
-                required
-            >
+<div class="point">
+    <strong>Separate owner accounts</strong>
+    <small>
+        The same email can also have a separate
+        business-owner account.
+    </small>
+</div>
 
-            <button
-                type="submit"
-                class="auth-button"
-                id="ownerSignupButton"
-            >
-                Create Owner Account
-            </button>
+</div>
 
-        </form>
+</div>
 
+<small style="color:#64748b">
+    © RetentionApp
+</small>
 
-        <p
-            id="ownerSignupMessage"
-            class="auth-message"
-        ></p>
+</section>
 
 
-        <div class="auth-divider">
-            OR
-        </div>
+<section class="right">
+
+<div class="top">
+
+<div class="small-label">
+    WELCOME BACK
+</div>
+
+<h2>
+    Log in
+</h2>
+
+<p class="subtitle">
+    Continue to your RetentionApp customer account.
+</p>
+
+</div>
 
 
-        <button
-            id="backToOwnerLogin"
-            class="secondary-auth-button"
-        >
-            Already have an owner account? Login
-        </button>
+<div class="role-box">
+
+<a
+    class="active"
+    href="/static/login.html"
+>
+    Customer
+</a>
+
+<a
+    href="/static/owner-login.html"
+>
+    Business Owner
+</a>
+
+</div>
 
 
-        <button
-            id="backToProfile"
-            class="secondary-auth-button"
-            style="margin-top: 10px;"
-        >
-            ← Back to Profile
-        </button>
+<form id="loginForm">
 
-    </div>
+<div class="field">
 
-</main>
+<label for="email">
+    Email address
+</label>
+
+<input
+    id="email"
+    name="email"
+    type="email"
+    autocomplete="email"
+    placeholder="you@example.com"
+    maxlength="254"
+    required
+>
+
+</div>
+
+
+<div class="field">
+
+<label for="password">
+    Password
+</label>
+
+<div class="password-wrap">
+
+<input
+    id="password"
+    name="password"
+    type="password"
+    autocomplete="current-password"
+    placeholder="Enter your password"
+    required
+>
+
+<button
+    type="button"
+    class="show"
+    id="showPassword"
+>
+    SHOW
+</button>
+
+</div>
+
+</div>
+
+
+<div
+    id="message"
+    class="message"
+></div>
+
+
+<button
+    class="submit"
+    id="submitBtn"
+    type="submit"
+>
+    Log in
+</button>
+
+</form>
+
+
+<div class="switch">
+    New to RetentionApp?
+    <a href="/static/signup.html">
+        Create an account
+    </a>
+</div>
+
+
+<div class="switch" style="margin-top:10px">
+    Need a business account?
+    <a href="/static/owner-signup.html">
+        Create owner account
+    </a>
+</div>
+
+</section>
+
+</div>
+
+</div>
 
 
 <script>
 
-const ownerSignupForm =
-    document.getElementById(
-        "ownerSignupForm"
-    );
+const form =
+    document.getElementById("loginForm");
 
-const ownerSignupMessage =
-    document.getElementById(
-        "ownerSignupMessage"
-    );
+const message =
+    document.getElementById("message");
 
-const ownerSignupButton =
-    document.getElementById(
-        "ownerSignupButton"
-    );
+const submitBtn =
+    document.getElementById("submitBtn");
+
+const password =
+    document.getElementById("password");
+
+const showPassword =
+    document.getElementById("showPassword");
 
 
-// =========================
-// OWNER SIGNUP
-// =========================
+function showMessage(
+    text,
+    type="error"
+){
 
-ownerSignupForm.addEventListener(
+    message.textContent = text;
+
+    message.className =
+        "message " + type;
+}
+
+
+showPassword.addEventListener(
+    "click",
+    () => {
+
+        const visible =
+            password.type === "text";
+
+        password.type =
+            visible
+            ? "password"
+            : "text";
+
+        showPassword.textContent =
+            visible
+            ? "SHOW"
+            : "HIDE";
+    }
+);
+
+
+form.addEventListener(
     "submit",
-    async function(event) {
+    async (event) => {
 
         event.preventDefault();
 
+        showMessage("");
 
-        const name =
-            document.getElementById(
-                "ownerName"
-            ).value
-            .trim();
+        submitBtn.disabled = true;
+        submitBtn.textContent =
+            "Signing in...";
 
+        const formData =
+            new FormData(form);
 
         const email =
-            document.getElementById(
-                "ownerEmail"
-            ).value
+            String(
+                formData.get("email") || ""
+            )
             .trim()
             .toLowerCase();
 
-
-        const password =
-            document.getElementById(
-                "ownerPassword"
-            ).value;
-
-
-        if (!name) {
-
-            ownerSignupMessage.textContent =
-                "❌ Name is required.";
-
-            return;
-
-        }
-
-
-        if (password.length < 6) {
-
-            ownerSignupMessage.textContent =
-                "❌ Password must be at least 6 characters.";
-
-            return;
-
-        }
-
-
-        ownerSignupMessage.textContent =
-            "Creating owner account...";
-
-        ownerSignupButton.disabled = true;
-
+        formData.set(
+            "email",
+            email
+        );
 
         try {
 
-            const formData =
-                new FormData();
-
-
-            formData.append(
-                "name",
-                name
-            );
-
-
-            formData.append(
-                "email",
-                email
-            );
-
-
-            formData.append(
-                "password",
-                password
-            );
-
-
             const response =
                 await fetch(
-                    "/api/owner/signup",
+                    "/api/login",
                     {
-                        method: "POST",
-                        body: formData
+                        method:"POST",
+                        body:formData,
+                        credentials:"include"
                     }
                 );
 
+            let data = {};
 
-            const data =
-                await response.json();
-
+            try {
+                data =
+                    await response.json();
+            }
+            catch (_) {}
 
             if (!response.ok) {
 
-                throw new Error(
+                showMessage(
                     data.detail ||
-                    "Owner signup failed"
+                    "Unable to log in."
                 );
 
+                return;
             }
 
-
-            ownerSignupMessage.textContent =
-                "✅ Owner account created! Redirecting...";
-
-
-            setTimeout(
-                function() {
-
-                    window.location.href =
-                        "/static/owner-login.html";
-
-                },
-                800
+            showMessage(
+                "Login successful. Opening your account...",
+                "success"
             );
 
-
-        } catch (error) {
-
-            console.error(
-                "Owner signup error:",
-                error
-            );
-
-
-            ownerSignupMessage.textContent =
-                "❌ " + error.message;
-
-
-            ownerSignupButton.disabled = false;
+            window.location.href =
+                data.redirect || "/";
 
         }
+        catch (error) {
 
-    }
-);
+            showMessage(
+                "Unable to connect to RetentionApp. Please try again."
+            );
 
+        }
+        finally {
 
-// =========================
-// OWNER LOGIN
-// =========================
-
-document.getElementById(
-    "backToOwnerLogin"
-).addEventListener(
-    "click",
-    function() {
-
-        window.location.href =
-            "/static/owner-login.html";
-
-    }
-);
-
-
-// =========================
-// PROFILE
-// =========================
-
-document.getElementById(
-    "backToProfile"
-).addEventListener(
-    "click",
-    function() {
-
-        window.location.href =
-            "/static/profile.html";
-
+            submitBtn.disabled = false;
+            submitBtn.textContent =
+                "Log in";
+        }
     }
 );
 
 </script>
 
 </body>
-
 </html>
