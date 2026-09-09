@@ -10,9 +10,7 @@ DB_NAME = "retention.db"
 # =========================================================
 
 def get_connection():
-
     conn = sqlite3.connect(DB_NAME)
-
     return conn
 
 
@@ -67,6 +65,35 @@ def init_db():
             business_id INTEGER NOT NULL,
             UNIQUE(user_id, business_id)
         )
+    """)
+
+    # =====================================================
+    # SESSIONS
+    # =====================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token_hash TEXT NOT NULL UNIQUE,
+            user_id INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sessions_token_hash
+        ON sessions(token_hash)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sessions_user_id
+        ON sessions(user_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
+        ON sessions(expires_at)
     """)
 
     conn.commit()
@@ -628,3 +655,99 @@ def update_business_offer(
     conn.close()
 
     return updated
+
+
+# =========================================================
+# SESSION HELPERS
+# =========================================================
+
+def create_session(
+    token_hash,
+    user_id,
+    expires_at,
+    created_at
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO sessions
+        (
+            token_hash,
+            user_id,
+            expires_at,
+            created_at
+        )
+        VALUES (?, ?, ?, ?)
+    """, (
+        token_hash,
+        user_id,
+        expires_at,
+        created_at
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def get_session_user_id(
+    token_hash,
+    current_time
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            user_id
+        FROM sessions
+        WHERE token_hash = ?
+        AND expires_at > ?
+    """, (
+        token_hash,
+        current_time
+    ))
+
+    result = cursor.fetchone()
+
+    conn.close()
+
+    return result[0] if result else None
+
+
+def delete_session(
+    token_hash
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM sessions
+        WHERE token_hash = ?
+    """, (
+        token_hash
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def delete_expired_sessions(
+    current_time
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM sessions
+        WHERE expires_at <= ?
+    """, (
+        current_time
+    ))
+
+    conn.commit()
+    conn.close()
