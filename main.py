@@ -272,7 +272,7 @@ def signup(
     name = name.strip()
     email = email.strip().lower()
 
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
 
         raise HTTPException(
             status_code=400,
@@ -375,7 +375,7 @@ def login(
 
     email = email.strip().lower()
 
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
 
         raise HTTPException(
             status_code=400,
@@ -1303,7 +1303,7 @@ def owner_signup(
     name = name.strip()
     email = email.strip().lower()
 
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
 
         raise HTTPException(
             status_code=400,
@@ -1406,7 +1406,7 @@ def owner_login(
 
     email = email.strip().lower()
 
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
 
         raise HTTPException(
             status_code=400,
