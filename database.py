@@ -794,6 +794,23 @@ def create_business_claim_request(business_id, owner_id, note, created_at):
     try:
         cursor = conn.cursor()
         cursor.execute("""
+            SELECT id, status FROM business_claim_requests
+            WHERE business_id = ?
+        """, (business_id,))
+        existing = cursor.fetchone()
+        if existing:
+            if existing[1] != "rejected":
+                raise sqlite3.IntegrityError("A claim already exists for this business.")
+            cursor.execute("""
+                UPDATE business_claim_requests
+                SET owner_id = ?, note = ?, status = 'pending',
+                    created_at = ?, reviewed_at = NULL, reviewed_by = NULL
+                WHERE id = ?
+            """, (owner_id, note, created_at, existing[0]))
+            conn.commit()
+            return existing[0]
+
+        cursor.execute("""
             INSERT INTO business_claim_requests
                 (business_id, owner_id, note, status, created_at)
             VALUES (?, ?, ?, 'pending', ?)
