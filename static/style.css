@@ -187,3 +187,10 @@ body:has(form) .role-box a.active{background:white;color:var(--green);box-shadow
 .location-fallback-btn:hover{border-color:#9eb69b;background:#e2edda}
 .location-fallback-btn:disabled{opacity:.65;cursor:wait}
 @media(max-width:700px){.location-fallback-btn{min-height:39px}}
+
+/* Shared customer / owner navigation */
+.header-auth-link,.header-owner-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;border-radius:12px;text-decoration:none;font-size:11px;font-weight:800;white-space:nowrap;transition:transform .18s,background .18s}
+.header-auth-link{border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.header-owner-link{background:var(--green);color:white}
+.header-auth-link:hover,.header-owner-link:hover{transform:translateY(-1px)}
+@media(max-width:760px){.header-actions{gap:8px}.header-note{display:none}.header-auth-link,.header-owner-link{min-height:37px;padding:0 10px;font-size:10px}.top-bar{padding:12px 16px}.brand-mark{width:38px;height:38px}.brand-text small{display:none}}

@@ -148,6 +148,32 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
+
+        /* Consistent RetentionApp owner dashboard visual system */
+        body{background:#f7f7f2;color:#1d3027}
+        .top-bar{padding:16px max(20px,calc((100vw - 1040px)/2));background:rgba(247,247,242,.94);border-bottom:1px solid #e5e8de}
+        .top-bar h1{font-family:Manrope,'DM Sans',sans-serif;font-size:20px;letter-spacing:-.7px;color:#1d4634}
+        main{width:min(100% - 36px,960px);margin:0 auto;padding:32px 0 70px}
+        .dashboard-header{padding:28px 30px;border-radius:22px;background:#1d4634;color:#fff;margin-bottom:18px}
+        .dashboard-header h2{font-family:Manrope,sans-serif;font-size:clamp(27px,4vw,38px);letter-spacing:-1.2px;margin:0 0 8px}
+        .dashboard-header p{color:#ffffffb5;margin:0;font-size:13px}
+        .owner-card,.business-card-owner,.empty-state{border:1px solid #e5e8de;border-radius:18px;box-shadow:0 8px 25px #1d302708}
+        .owner-card{background:#fffefa;padding:21px 24px}
+        .owner-card h3,.business-card-owner h2{font-family:Manrope,sans-serif;color:#1d4634;letter-spacing:-.4px}
+        .owner-card p,.business-card-owner p{color:#6d796e}
+        .business-card-owner{background:#fffefa;padding:23px;margin-bottom:16px}
+        .business-card-owner h2{font-size:22px}
+        .offer-box{border-color:#e5e8de}
+        .offer-box textarea{font-family:'DM Sans',sans-serif;background:#fff;border-color:#d9ded3;line-height:1.6}
+        .offer-box textarea:focus{border-color:#719476;box-shadow:0 0 0 4px #275b4312}
+        .update-button{background:#275b43;border-radius:12px;font-size:13px;font-weight:800;min-height:46px}
+        .update-button:hover{background:#1d4634}
+        .logout-button{width:auto;min-width:150px;border:1px solid #e5e8de;border-radius:12px;background:#fffefa;color:#405449;font-size:13px;font-weight:800;padding:13px 20px}
+        .logout-button:hover{background:#f0f2e9}
+        .message{font-size:12px;line-height:1.5}
+        .empty-state{background:#fffefa;padding:32px 24px;line-height:1.7}
+        @media(max-width:600px){main{width:min(100% - 24px,960px);padding:18px 0 48px}.dashboard-header{padding:23px 21px;border-radius:18px}.owner-card,.business-card-owner{padding:18px}.top-bar{padding:13px 16px}.logout-button{width:100%}}
+
     </style>
 
 </head>
@@ -255,15 +281,15 @@
         try {
 
             const response = await fetch(
-                "/api/owner/me",
+                "/api/me",
                 {
-                    credentials: "include"
+                    credentials: "same-origin"
                 }
             );
 
             const data = await response.json();
 
-            if (!data.logged_in) {
+            if (!data.logged_in || !data.user || data.user.role !== "owner") {
 
                 window.location.href =
                     "/static/owner-login.html";
@@ -274,17 +300,17 @@
             document.getElementById(
                 "welcomeText"
             ).textContent =
-                `Welcome, ${data.owner.name}`;
+                `Welcome, ${data.user.name}`;
 
             document.getElementById(
                 "ownerName"
             ).textContent =
-                `Name: ${data.owner.name}`;
+                `Name: ${data.user.name}`;
 
             document.getElementById(
                 "ownerEmail"
             ).textContent =
-                `Email: ${data.owner.email}`;
+                `Email: ${data.user.email}`;
 
         }
 

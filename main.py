@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import time
 import requests
@@ -271,6 +272,13 @@ def signup(
     name = name.strip()
     email = email.strip().lower()
 
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid email address."
+        )
+
     if not name:
 
         raise HTTPException(
@@ -285,11 +293,11 @@ def signup(
             detail="Email is required."
         )
 
-    if len(password) < 6:
+    if len(password) < 8:
 
         raise HTTPException(
             status_code=400,
-            detail="Password must be at least 6 characters."
+            detail="Password must be at least 8 characters."
         )
 
     existing_customer = get_user_by_email_and_role(
@@ -366,6 +374,13 @@ def login(
 ):
 
     email = email.strip().lower()
+
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid email address."
+        )
 
     user = get_user_by_email_and_role(
         email,
@@ -1288,6 +1303,13 @@ def owner_signup(
     name = name.strip()
     email = email.strip().lower()
 
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid email address."
+        )
+
     if not name:
 
         raise HTTPException(
@@ -1302,11 +1324,11 @@ def owner_signup(
             detail="Email is required."
         )
 
-    if len(password) < 6:
+    if len(password) < 8:
 
         raise HTTPException(
             status_code=400,
-            detail="Password must be at least 6 characters."
+            detail="Password must be at least 8 characters."
         )
 
     existing_owner = get_user_by_email_and_role(
@@ -1383,6 +1405,13 @@ def owner_login(
 ):
 
     email = email.strip().lower()
+
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid email address."
+        )
 
     user = get_user_by_email_and_role(
         email,

@@ -3,7 +3,6 @@ let currentTab = "nearby";
 let currentCategory = "all";
 let searchText = "";
 let nearbyLoaded = false;
-let manualLocationSelected = false;
 
 const searchInput = document.getElementById("searchInput");
 const businessList = document.getElementById("businessList");
@@ -75,7 +74,6 @@ function loadNearbyBusinesses() {
 
     navigator.geolocation.getCurrentPosition(
         function(position) {
-            manualLocationSelected = false;
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
 
@@ -585,36 +583,6 @@ if (searchInput) {
         handleSearch
     );
 }
-
-const useGunaLocationButton = document.getElementById("useGunaLocation");
-
-if (useGunaLocationButton) {
-
-    useGunaLocationButton.addEventListener("click", function() {
-
-        manualLocationSelected = true;
-        currentTab = "nearby";
-
-        nearbyTab.classList.add("active");
-        followingTab.classList.remove("active");
-        offersTab.classList.remove("active");
-
-        useGunaLocationButton.textContent = "Loading Guna...";
-        useGunaLocationButton.disabled = true;
-
-        const locationStatus = document.getElementById("locationStatus");
-        if (locationStatus) {
-            locationStatus.textContent = "Using Guna, Madhya Pradesh";
-        }
-
-        loadBusinessesAtCoordinates(24.6467, 77.3113, "Guna, Madhya Pradesh")
-            .finally(function() {
-                useGunaLocationButton.textContent = "Use Guna, MP";
-                useGunaLocationButton.disabled = false;
-            });
-    });
-}
-
 
 if (nearbyTab) {
 
