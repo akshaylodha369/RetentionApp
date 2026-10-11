@@ -749,7 +749,7 @@ def nearby(
     cached_rows = get_nearby_businesses(
         lat,
         lng,
-        radius_km=3.0
+        radius_km=30.0
     )
 
     if cached_rows:
@@ -820,7 +820,7 @@ def nearby(
                     "latitude": lat,
                     "longitude": lng
                 },
-                "radius": 3000.0
+                "radius": 30000.0
             }
         }
     }
@@ -996,7 +996,7 @@ def nearby(
     nearby_rows = get_nearby_businesses(
         lat,
         lng,
-        radius_km=3.0
+        radius_km=30.0
     )
 
     print(
