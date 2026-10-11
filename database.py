@@ -1,8 +1,11 @@
+import os
 import sqlite3
 import math
 
 
-DB_NAME = "retention.db"
+# Set DATABASE_PATH to a persistent disk path on Render, e.g. /var/data/retention.db.
+# Local development keeps the database in the project root.
+DB_NAME = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "retention.db"))
 
 
 # =========================================================
@@ -10,7 +13,12 @@ DB_NAME = "retention.db"
 # =========================================================
 
 def get_connection():
-    conn = sqlite3.connect(DB_NAME)
+    parent = os.path.dirname(DB_NAME)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    conn = sqlite3.connect(DB_NAME, timeout=15)
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 15000")
     return conn
 
 
@@ -94,6 +102,30 @@ def init_db():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
         ON sessions(expires_at)
+    """)
+
+    # Owner claims are requests only. A business is assigned only after an
+    # administrator manually verifies the claimant outside the app.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS business_claim_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id INTEGER NOT NULL,
+            owner_id INTEGER NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK(status IN ('pending', 'approved', 'rejected')),
+            created_at INTEGER NOT NULL,
+            reviewed_at INTEGER,
+            reviewed_by TEXT,
+            UNIQUE(business_id),
+            FOREIGN KEY(business_id) REFERENCES businesses(id),
+            FOREIGN KEY(owner_id) REFERENCES users(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_claim_requests_status
+        ON business_claim_requests(status, created_at)
     """)
 
     conn.commit()
@@ -751,3 +783,102 @@ def delete_expired_sessions(
 
     conn.commit()
     conn.close()
+
+
+# =========================================================
+# BUSINESS CLAIM REQUESTS
+# =========================================================
+
+def create_business_claim_request(business_id, owner_id, note, created_at):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, status FROM business_claim_requests
+            WHERE business_id = ?
+        """, (business_id,))
+        existing = cursor.fetchone()
+        if existing:
+            if existing[1] != "rejected":
+                raise sqlite3.IntegrityError("A claim already exists for this business.")
+            cursor.execute("""
+                UPDATE business_claim_requests
+                SET owner_id = ?, note = ?, status = 'pending',
+                    created_at = ?, reviewed_at = NULL, reviewed_by = NULL
+                WHERE id = ?
+            """, (owner_id, note, created_at, existing[0]))
+            conn.commit()
+            return existing[0]
+
+        cursor.execute("""
+            INSERT INTO business_claim_requests
+                (business_id, owner_id, note, status, created_at)
+            VALUES (?, ?, ?, 'pending', ?)
+        """, (business_id, owner_id, note, created_at))
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def get_business_claim_requests(owner_id):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id, c.business_id, b.name, b.address, c.note,
+                   c.status, c.created_at
+            FROM business_claim_requests c
+            JOIN businesses b ON b.id = c.business_id
+            WHERE c.owner_id = ?
+            ORDER BY c.created_at DESC
+        """, (owner_id,))
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+def review_business_claim_request(claim_id, status, reviewed_at, reviewed_by):
+    if status not in ("approved", "rejected"):
+        raise ValueError("status must be approved or rejected")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute("""
+            SELECT business_id, owner_id, status
+            FROM business_claim_requests
+            WHERE id = ?
+        """, (claim_id,))
+        claim = cursor.fetchone()
+        if not claim or claim[2] != "pending":
+            conn.rollback()
+            return {"result": "not_pending"}
+
+        business_id, owner_id, _ = claim
+        if status == "approved":
+            cursor.execute("""
+                UPDATE businesses SET owner_id = ?
+                WHERE id = ? AND owner_id IS NULL
+            """, (owner_id, business_id))
+            if cursor.rowcount != 1:
+                conn.rollback()
+                return {"result": "already_claimed"}
+
+        cursor.execute("""
+            UPDATE business_claim_requests
+            SET status = ?, reviewed_at = ?, reviewed_by = ?
+            WHERE id = ? AND status = 'pending'
+        """, (status, reviewed_at, reviewed_by, claim_id))
+        if cursor.rowcount != 1:
+            conn.rollback()
+            return {"result": "not_pending"}
+
+        conn.commit()
+        return {"result": status, "business_id": business_id, "owner_id": owner_id}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
