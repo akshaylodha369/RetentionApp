@@ -586,50 +586,6 @@ if (searchInput) {
     );
 }
 
-const searchLocationButton = document.getElementById("searchLocationButton");
-const locationSearchInput = document.getElementById("locationSearchInput");
-
-if (searchLocationButton && locationSearchInput) {
-    searchLocationButton.addEventListener("click", async function() {
-        const query = locationSearchInput.value.trim();
-        const locationStatus = document.getElementById("locationStatus");
-
-        if (query.length < 2) {
-            if (locationStatus) locationStatus.textContent = "Enter a city or area first";
-            locationSearchInput.focus();
-            return;
-        }
-
-        searchLocationButton.disabled = true;
-        searchLocationButton.textContent = "Searching…";
-        if (locationStatus) locationStatus.textContent = "Finding " + query + "…";
-
-        try {
-            const response = await fetch("/api/geocode?q=" + encodeURIComponent(query));
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.detail || "Location search failed");
-
-            manualLocationSelected = true;
-            currentTab = "nearby";
-            nearbyTab.classList.add("active");
-            followingTab.classList.remove("active");
-            offersTab.classList.remove("active");
-            if (locationStatus) locationStatus.textContent = "Showing businesses within 30 km of " + data.label;
-            await loadBusinessesAtCoordinates(data.lat, data.lng, data.label);
-        } catch (error) {
-            if (locationStatus) locationStatus.textContent = error.message || "Could not find that location";
-            businessList.innerHTML = "<p>Could not find that city or area. Try adding the state, e.g. Guna, Madhya Pradesh.</p>";
-        } finally {
-            searchLocationButton.disabled = false;
-            searchLocationButton.textContent = "Search location";
-        }
-    });
-
-    locationSearchInput.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") searchLocationButton.click();
-    });
-}
-
 const useGunaLocationButton = document.getElementById("useGunaLocation");
 
 if (useGunaLocationButton) {
