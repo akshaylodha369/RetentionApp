@@ -726,6 +726,24 @@ async def migrate_businesses(
 # NEARBY BUSINESSES
 # =========================================================
 
+@app.get("/api/geocode")
+def geocode_location(q: str):
+    query = q.strip()
+    if len(query) < 2 or len(query) > 200:
+        raise HTTPException(status_code=400, detail="Enter a city or area name.")
+    if not GOOGLE_PLACES_API_KEY:
+        raise HTTPException(status_code=500, detail="Google Places API key is not configured.")
+    result = requests.post("https://places.googleapis.com/v1/places:searchText", headers={"Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY, "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location"}, json={"textQuery": query, "maxResultCount": 1}, timeout=15)
+    if not result.ok:
+        raise HTTPException(status_code=502, detail="Location search failed. Check Places API (New) is enabled.")
+    places = result.json().get("places", [])
+    if not places:
+        raise HTTPException(status_code=404, detail="Location not found. Add the state name and try again.")
+    place = places[0]
+    location = place.get("location", {})
+    return {"label": place.get("formattedAddress") or place.get("displayName", {}).get("text", query), "lat": location.get("latitude"), "lng": location.get("longitude")}
+
+
 @app.get("/api/nearby")
 def nearby(
     lat: float,
