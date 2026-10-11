@@ -58,19 +58,48 @@ async function loadBusinessesAtCoordinates(lat, lng, label) {
 
 function loadNearbyBusinesses() {
 
-    // Default to Guna, MP because browser/IP location can be inaccurate.
-    // The user can refresh this same location with the "Use Guna, MP" button.
-    manualLocationSelected = true;
-
     const locationStatus = document.getElementById("locationStatus");
-    if (locationStatus) {
-        locationStatus.textContent = "Using Guna, Madhya Pradesh";
+
+    if (!navigator.geolocation) {
+        if (locationStatus) {
+            locationStatus.textContent = "Location unavailable — choose Guna, MP or enable device location";
+        }
+        businessList.innerHTML = "<p>Please enable location access in your browser to find nearby businesses.</p>";
+        return;
     }
 
-    loadBusinessesAtCoordinates(
-        24.6467,
-        77.3113,
-        "Guna, Madhya Pradesh"
+    if (locationStatus) {
+        locationStatus.textContent = "Getting your current location…";
+    }
+    businessList.innerHTML = "<p>Finding places near your current location…</p>";
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            manualLocationSelected = false;
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            if (locationStatus) {
+                locationStatus.textContent = "Showing businesses within 30 km of your location";
+            }
+
+            loadBusinessesAtCoordinates(lat, lng, "your location");
+        },
+        function(error) {
+            console.warn("Location permission/lookup failed:", error);
+
+            if (locationStatus) {
+                locationStatus.textContent = "Location access needed to show places near you";
+            }
+
+            businessList.innerHTML =
+                "<p>Could not access your location. Allow Location permission for this site, then reload. You can also use the “Use Guna, MP” button.</p>";
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
     );
 }
 
