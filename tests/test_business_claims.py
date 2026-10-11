@@ -37,6 +37,9 @@ def test_claim_request_approval_assigns_only_requested_business(tmp_path, monkey
     )
     assert claim_id > 0
     assert database.get_business_claim_requests(owner_id)[0][5] == "pending"
+    pending = database.get_pending_business_claim_requests()
+    assert pending[0][0] == claim_id
+    assert pending[0][6] == "owner@example.com"
 
     result = database.review_business_claim_request(
         claim_id, "approved", 200, "manual-admin-review"
