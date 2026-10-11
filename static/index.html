@@ -1,216 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>RetentionApp</title>
-
+    <meta name="theme-color" content="#f7f7f2">
+    <meta name="description" content="Discover local favourites, follow nearby businesses and keep their latest offers close.">
+    <title>RetentionApp — Local finds, better perks</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-
-<body>
-
+<body class="home-page">
 <header class="top-bar">
-
-    <div class="brand">
-        <div class="brand-mark">R</div>
-
-        <div class="brand-text">
-            <h1>RetentionApp</h1>
-            <span>Your places. Your perks.</span>
-        </div>
-    </div>
-
-    <a
-        href="/static/profile.html"
-        class="profile"
-        aria-label="Profile"
-    >
-        👤
+    <a class="brand" href="/" aria-label="RetentionApp home">
+        <span class="brand-mark" aria-hidden="true">r.</span>
+        <span class="brand-text">
+            <strong>retention<span>app</span></strong>
+            <small>Your neighbourhood, closer.</small>
+        </span>
     </a>
-
+    <div class="header-actions">
+        <span class="header-note"><span class="status-dot"></span> Made for your local life</span>
+        <a href="/static/profile.html" class="profile" aria-label="Open profile" title="Your profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.5-3.4 3.1-5.2 7-5.2s6.5 1.8 7 5.2"></path></svg>
+        </a>
+    </div>
 </header>
 
-
 <main>
-
-<section class="hero">
-
-    <div class="hero-badge">
-        ✦ Discover Nearby
-    </div>
-
-    <h1>
-        Your favourite places,
-        <br>
-        all in one place.
-    </h1>
-
-    <p>
-        Discover local businesses, follow the ones you love
-        and stay updated with their offers.
-    </p>
-
-    <div class="hero-stats">
-
-        <div class="stat-card">
-            <h3>100+</h3>
-            <span>Businesses</span>
+    <section class="hero">
+        <div class="hero-copy">
+            <div class="hero-badge"><span class="sparkle">✳</span> YOUR LOCAL DISCOVERY GUIDE</div>
+            <h1>Good places.<br><span>Closer to you.</span></h1>
+            <p>Find the cafés, restaurants and neighbourhood shops worth coming back to — and keep their offers in one place.</p>
+            <a class="hero-cta" href="#discover">Explore places <span aria-hidden="true">↘</span></a>
+            <div class="hero-trust"><span class="trust-avatars" aria-hidden="true"><i>☕</i><i>🥐</i><i>🌿</i></span><span>Your next favourite might be just around the corner.</span></div>
         </div>
-
-        <div class="stat-card">
-            <h3>24/7</h3>
-            <span>Offers</span>
+        <div class="hero-art" aria-hidden="true">
+            <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+            <div class="art-sun"></div>
+            <div class="art-tile tile-main"><span class="tile-emoji">☕</span><span class="tile-label">YOUR NEXT<br>COFFEE SPOT</span><span class="tile-arrow">↗</span></div>
+            <div class="art-tile tile-small tile-top"><span>🥐</span><small>Freshly found</small></div>
+            <div class="art-tile tile-small tile-bottom"><span>✦</span><small>Local perks</small></div>
+            <div class="art-leaf leaf-one"></div><div class="art-leaf leaf-two"></div>
         </div>
-
-        <div class="stat-card">
-            <h3>Near</h3>
-            <span>Your Area</span>
+        <div class="hero-bottom">
+            <span><b>01</b> Discover nearby</span><span class="hero-bottom-line"></span><span><b>02</b> Follow favourites</span><span class="hero-bottom-line"></span><span><b>03</b> Catch their offers</span>
         </div>
-
-    </div>
-
-</section>
-
-
-    <section class="search-box">
-
-        <span class="search-icon">⌕</span>
-
-        <input
-            type="text"
-            id="searchInput"
-            placeholder="Search businesses..."
-            autocomplete="off"
-        >
-
     </section>
 
+    <section class="discover-section" id="discover">
+        <div class="discover-intro">
+            <div><p class="section-eyebrow">THE NEIGHBOURHOOD EDIT</p><h2>Find your kind of place<span>.</span></h2><p class="section-subtitle">A little closer to the places you’ll love.</p></div>
+            <div class="location-note"><span class="location-icon">⌖</span><span><strong>Explore around you</strong><small>Enable location to see nearby places</small></span></div>
+        </div>
 
-    <section class="filters">
+        <section class="search-box" aria-label="Search businesses">
+            <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg></span>
+            <input type="search" id="searchInput" placeholder="Search cafés, restaurants, shops..." autocomplete="off" aria-label="Search businesses">
+            <span class="search-hint" aria-hidden="true">SEARCH</span>
+        </section>
 
-        <button
-            class="filter-btn active"
-            data-category="all"
-            type="button"
-        >
-            All
-        </button>
+        <section class="filters" aria-label="Filter by category">
+            <button class="filter-btn active" data-category="all" type="button">✳ <span>Everything</span></button>
+            <button class="filter-btn" data-category="cafe" type="button"><span aria-hidden="true">☕</span> Cafés</button>
+            <button class="filter-btn" data-category="restaurant" type="button"><span aria-hidden="true">🍽</span> Restaurants</button>
+            <button class="filter-btn" data-category="shop" type="button"><span aria-hidden="true">🛍</span> Shops</button>
+        </section>
 
-        <button
-            class="filter-btn"
-            data-category="cafe"
-            type="button"
-        >
-            ☕ Cafes
-        </button>
-
-        <button
-            class="filter-btn"
-            data-category="restaurant"
-            type="button"
-        >
-            🍽 Restaurants
-        </button>
-
-        <button
-            class="filter-btn"
-            data-category="shop"
-            type="button"
-        >
-            🛍 Shops
-        </button>
-
-    </section>
-
-
-    <section class="tabs">
-
-        <button
-            id="nearbyTab"
-            class="active"
-            type="button"
-        >
-            <span>⌖</span>
-            Nearby
-        </button>
-
-        <button
-            id="followingTab"
-            type="button"
-        >
-            <span>♡</span>
-            Following
-        </button>
-
-        <button
-            id="offersTab"
-            type="button"
-        >
-            <span>✦</span>
-            Offers
-        </button>
-
-    </section>
-
-
-    <section class="business-section">
-
-        <div class="section-heading">
-
-            <div>
-                <p class="section-eyebrow">AROUND YOU</p>
-
-                <h2 id="sectionTitle">
-                    Nearby Businesses
-                </h2>
+        <section class="results-panel">
+            <div class="tabs" role="tablist" aria-label="Business lists">
+                <button id="nearbyTab" class="active" type="button" role="tab"><span class="tab-icon">⌖</span> Nearby <span class="tab-count">01</span></button>
+                <button id="followingTab" type="button" role="tab"><span class="tab-icon">♡</span> Following</button>
+                <button id="offersTab" type="button" role="tab"><span class="tab-icon">✳</span> Offers</button>
             </div>
-
-            <div class="nearby-badge">
-                <span></span>
-                Nearby
+            <div class="section-heading">
+                <div><p class="section-eyebrow">HANDPICKED BY YOUR LOCATION</p><h2 id="sectionTitle">Nearby Businesses</h2></div>
+                <div class="nearby-badge"><span></span> Around you</div>
             </div>
-
-        </div>
-
-
-        <div id="businessList">
-            <p class="loading-text">Finding places near you...</p>
-        </div>
-
+            <div id="businessList" aria-live="polite">
+                <div class="loading-state"><span class="loading-spinner"></span><p>Finding places near you...</p></div>
+            </div>
+            <div class="results-footer"><span>GOOD PLACES ARE CLOSER THAN YOU THINK.</span><span>Made for local discovery <b>↗</b></span></div>
+        </section>
     </section>
-
+    <section class="closing-note"><span class="closing-mark">r.</span><p>Support local. Find your favourites.<br><strong>Make every visit feel worth it.</strong></p><a href="/static/profile.html">Your profile <span>↗</span></a></section>
 </main>
 
-
-<nav class="bottom-nav">
-
-    <button
-        id="homeNav"
-        class="active"
-        type="button"
-        aria-label="Home"
-    >
-        <span>⌂</span>
-        <small>Home</small>
-    </button>
-
-    <button
-        id="profileNav"
-        type="button"
-        aria-label="Profile"
-    >
-        <span>♙</span>
-        <small>Profile</small>
-    </button>
-
+<nav class="bottom-nav" aria-label="Main navigation">
+    <button id="homeNav" class="active" type="button" aria-label="Home"><span>⌂</span><small>Explore</small></button>
+    <button id="profileNav" type="button" aria-label="Profile"><span>♙</span><small>Profile</small></button>
 </nav>
-
-
 <script src="/static/app.js"></script>
-
 </body>
-
 </html>
