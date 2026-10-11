@@ -882,3 +882,21 @@ def review_business_claim_request(claim_id, status, reviewed_at, reviewed_by):
         raise
     finally:
         conn.close()
+
+
+def get_pending_business_claim_requests():
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id, c.business_id, b.name, b.address,
+                   u.id, u.name, u.email, c.note, c.created_at
+            FROM business_claim_requests c
+            JOIN businesses b ON b.id = c.business_id
+            JOIN users u ON u.id = c.owner_id
+            WHERE c.status = 'pending'
+            ORDER BY c.created_at ASC
+        """)
+        return cursor.fetchall()
+    finally:
+        conn.close()
