@@ -9,6 +9,7 @@ import re
 import secrets
 import time
 import requests
+import sqlite3
 
 from database import (
     init_db,
@@ -24,6 +25,9 @@ from database import (
     get_owner_businesses,
     get_business_by_id,
     update_business_offer,
+    create_business_claim_request,
+    get_business_claim_requests,
+    review_business_claim_request,
     create_session as db_create_session,
     get_session_user_id,
     delete_session,
@@ -1009,8 +1013,13 @@ def nearby(
 # LOAD BUSINESSES
 # =========================================================
 
-@app.get("/api/load-businesses")
-def load_businesses():
+@app.post("/api/admin/load-businesses")
+def load_businesses(request: Request):
+
+    expected_secret = os.environ.get("BUSINESS_MIGRATION_SECRET", "")
+    provided_secret = request.headers.get("X-Migration-Secret", "")
+    if not expected_secret or not provided_secret or not hmac.compare_digest(provided_secret, expected_secret):
+        raise HTTPException(status_code=404, detail="Not found.")
 
     if not GOOGLE_PLACES_API_KEY:
 
@@ -1287,6 +1296,92 @@ def following(
         }
         for row in rows
     ]
+
+
+
+# =========================================================
+# OWNER BUSINESS CLAIM REQUESTS
+# =========================================================
+
+@app.post("/api/owner/business-claims")
+def submit_business_claim(
+    business_id: int = Form(...),
+    note: str = Form(""),
+    session: str | None = Cookie(default=None)
+):
+    owner = require_owner(session)
+    note = note.strip()
+    if len(note) > 1000:
+        raise HTTPException(status_code=400, detail="Note must be 1000 characters or fewer.")
+
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    if business[7] is not None:
+        raise HTTPException(status_code=409, detail="This business is already assigned to an owner.")
+
+    try:
+        claim_id = create_business_claim_request(
+            business_id, owner[0], note, int(time.time())
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="A claim request already exists for this business.")
+
+    return {
+        "success": True,
+        "claim_id": claim_id,
+        "status": "pending",
+        "message": "Request submitted. Ownership must be verified before access is granted."
+    }
+
+
+@app.get("/api/owner/business-claims")
+def owner_business_claims(session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    rows = get_business_claim_requests(owner[0])
+    return [
+        {
+            "id": row[0],
+            "business_id": row[1],
+            "business_name": row[2],
+            "address": row[3],
+            "note": row[4],
+            "status": row[5],
+            "created_at": row[6]
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/admin/business-claims/{claim_id}/review")
+async def admin_review_business_claim(claim_id: int, request: Request):
+    expected_secret = os.environ.get("BUSINESS_MIGRATION_SECRET", "")
+    provided_secret = request.headers.get("X-Migration-Secret", "")
+    if (
+        not expected_secret
+        or not provided_secret
+        or not hmac.compare_digest(provided_secret, expected_secret)
+    ):
+        raise HTTPException(status_code=404, detail="Not found.")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
+
+    status = payload.get("status") if isinstance(payload, dict) else None
+    if status not in ("approved", "rejected"):
+        raise HTTPException(status_code=400, detail="Status must be approved or rejected.")
+
+    result = review_business_claim_request(
+        claim_id, status, int(time.time()), "manual-admin-review"
+    )
+    if result["result"] == "not_pending":
+        raise HTTPException(status_code=404, detail="Pending claim request not found.")
+    if result["result"] == "already_claimed":
+        raise HTTPException(status_code=409, detail="Business has already been assigned to an owner.")
+
+    return {"success": True, **result}
 
 
 # =========================================================
