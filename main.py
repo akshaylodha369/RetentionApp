@@ -28,6 +28,7 @@ from database import (
     create_business_claim_request,
     get_business_claim_requests,
     review_business_claim_request,
+    get_pending_business_claim_requests,
     create_session as db_create_session,
     get_session_user_id,
     delete_session,
@@ -1348,6 +1349,34 @@ def owner_business_claims(session: str | None = Cookie(default=None)):
             "note": row[4],
             "status": row[5],
             "created_at": row[6]
+        }
+        for row in rows
+    ]
+
+
+@app.get("/api/admin/business-claims")
+def admin_list_business_claims(request: Request):
+    expected_secret = os.environ.get("BUSINESS_MIGRATION_SECRET", "")
+    provided_secret = request.headers.get("X-Migration-Secret", "")
+    if (
+        not expected_secret
+        or not provided_secret
+        or not hmac.compare_digest(provided_secret, expected_secret)
+    ):
+        raise HTTPException(status_code=404, detail="Not found.")
+
+    rows = get_pending_business_claim_requests()
+    return [
+        {
+            "claim_id": row[0],
+            "business_id": row[1],
+            "business_name": row[2],
+            "business_address": row[3],
+            "owner_id": row[4],
+            "owner_name": row[5],
+            "owner_email": row[6],
+            "verification_note": row[7],
+            "created_at": row[8]
         }
         for row in rows
     ]
