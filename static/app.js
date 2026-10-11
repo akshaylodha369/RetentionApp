@@ -58,48 +58,21 @@ async function loadBusinessesAtCoordinates(lat, lng, label) {
 
 function loadNearbyBusinesses() {
 
-    businessList.innerHTML =
-        "<p>Finding businesses near you...</p>";
+    // Default to Guna, MP because desktop browser/IP location can be inaccurate.
+    // Users can explicitly choose this fallback from the visible location button too.
+    manualLocationSelected = true;
 
-    if (!navigator.geolocation) {
-
-        businessList.innerHTML =
-            "<p>Location is not supported by your browser. Use the Guna location button above.</p>";
-
-        return;
+    const locationStatus = document.getElementById("locationStatus");
+    if (locationStatus) {
+        locationStatus.textContent = "Using Guna, Madhya Pradesh";
     }
 
-    navigator.geolocation.getCurrentPosition(
-
-        function(position) {
-
-            // If the user manually selected a location while this request
-            // was pending, do not overwrite their choice with browser data.
-            if (manualLocationSelected) return;
-
-            loadBusinessesAtCoordinates(
-                position.coords.latitude,
-                position.coords.longitude,
-                "your location"
-            );
-        },
-
-        function(error) {
-
-            console.error(error);
-
-            businessList.innerHTML =
-                "<p>Couldn't get your device location. Use the Guna location button above, or enable location permissions.</p>";
-        },
-
-        {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0
-        }
+    loadBusinessesAtCoordinates(
+        24.6467,
+        77.3113,
+        "Guna, Madhya Pradesh"
     );
 }
-
 
 // =========================================================
 // FILTER BUSINESSES
