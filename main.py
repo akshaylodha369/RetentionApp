@@ -746,41 +746,8 @@ def nearby(
             detail="Invalid longitude."
         )
 
-    cached_rows = get_nearby_businesses(
-        lat,
-        lng,
-        radius_km=30.0
-    )
-
-    if cached_rows:
-
-        print(
-            f"NEARBY CACHE HIT | "
-            f"results={len(cached_rows)}"
-        )
-
-        return [
-            {
-                "id": row[0],
-                "name": row[1],
-                "category": row[2],
-                "latitude": row[3],
-                "longitude": row[4],
-                "address": row[5],
-                "offer": row[6],
-                "owner_id": row[7],
-                "distance_km": round(
-                    distance_km,
-                    2
-                )
-            }
-            for row, distance_km in cached_rows
-        ]
-
-    print(
-        "NEARBY CACHE MISS | "
-        "No businesses found in database."
-    )
+    # Always refresh Google Places results for this user's coordinates.
+    # Returning cached rows early caused sparse/stale nearby results.
 
     if not GOOGLE_PLACES_API_KEY:
 
