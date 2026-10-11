@@ -255,6 +255,11 @@
 
         </section>
 
+        <section class="owner-card" id="claimRequestsSection">
+            <h3>Business ownership requests</h3>
+            <p>Requests stay pending until an administrator independently verifies ownership.</p>
+            <div id="claimRequestsContainer">Loading requests...</div>
+        </section>
 
         <!-- =========================
              LOGOUT
@@ -373,20 +378,21 @@
 
 
             if (!data.length) {
-
                 container.innerHTML = `
                     <div class="empty-state">
-
-                        <h3>No business assigned</h3>
-
-                        <p>
-                            Your owner account does not
-                            have a business assigned yet.
-                        </p>
-
+                        <h3>No business assigned yet</h3>
+                        <p>Find your listing and submit a claim request. It will not be assigned until ownership is manually verified.</p>
+                        <div class="offer-box" style="margin-top:18px">
+                            <label for="claimBusinessSelect"><strong>Business listing</strong></label>
+                            <select id="claimBusinessSelect" style="width:100%;padding:12px;margin:10px 0;border:1px solid #d9ded3;border-radius:10px;background:#fff"></select>
+                            <label for="claimNote"><strong>Verification note (optional)</strong></label>
+                            <textarea id="claimNote" maxlength="1000" placeholder="Your official business website or how an administrator can verify your relationship" style="width:100%;margin-top:10px"></textarea>
+                            <button class="update-button" id="submitClaimButton" type="button">Request business access</button>
+                            <p id="claimMessage" role="status"></p>
+                        </div>
                     </div>
                 `;
-
+                await loadClaimableBusinesses();
                 return;
             }
 
@@ -482,6 +488,78 @@
         }
     }
 
+
+    async function loadClaimableBusinesses() {
+        const select = document.getElementById("claimBusinessSelect");
+        const message = document.getElementById("claimMessage");
+        if (!select) return;
+        try {
+            const response = await fetch("/api/businesses", { credentials: "same-origin" });
+            if (!response.ok) throw new Error("Could not load listings.");
+            const businesses = await response.json();
+            const claimable = businesses.filter(b => b.owner_id === null || b.owner_id === undefined);
+            select.innerHTML = '<option value="">Choose a business…</option>' +
+                claimable.map(b => '<option value="' + Number(b.id) + '">' +
+                    escapeHtml(b.name) + ' — ' + escapeHtml(b.address || "Address unavailable") +
+                    '</option>').join("");
+            if (!claimable.length) {
+                select.innerHTML = '<option value="">No unassigned listings available</option>';
+                message.textContent = "If your business is missing, contact the administrator to have its listing added.";
+            }
+        } catch (error) {
+            message.textContent = error.message || "Could not load listings.";
+        }
+
+        const button = document.getElementById("submitClaimButton");
+        if (!button) return;
+        button.addEventListener("click", async function () {
+            const businessId = select.value;
+            if (!businessId) {
+                message.textContent = "Choose a business first.";
+                return;
+            }
+            button.disabled = true;
+            message.textContent = "Submitting request…";
+            const form = new FormData();
+            form.append("business_id", businessId);
+            form.append("note", document.getElementById("claimNote").value.trim());
+            try {
+                const response = await fetch("/api/owner/business-claims", {
+                    method: "POST", body: form, credentials: "same-origin"
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.detail || "Could not submit request.");
+                message.textContent = "Request submitted. Your dashboard access will be enabled after manual verification.";
+                button.textContent = "Request submitted";
+                await loadClaimRequests();
+            } catch (error) {
+                message.textContent = error.message || "Could not submit request.";
+                button.disabled = false;
+            }
+        });
+    }
+
+    async function loadClaimRequests() {
+        const container = document.getElementById("claimRequestsContainer");
+        if (!container) return;
+        try {
+            const response = await fetch("/api/owner/business-claims", { credentials: "same-origin" });
+            if (!response.ok) throw new Error("Unable to load claim requests.");
+            const requests = await response.json();
+            if (!requests.length) {
+                container.textContent = "No claim requests yet.";
+                return;
+            }
+            container.innerHTML = requests.map(item =>
+                '<div style="padding:12px 0;border-bottom:1px solid #e5e8de">' +
+                '<strong>' + escapeHtml(item.business_name) + '</strong>' +
+                '<p>' + escapeHtml(item.address || "Address unavailable") + '</p>' +
+                '<p>Status: <strong>' + escapeHtml(item.status) + '</strong></p></div>'
+            ).join("");
+        } catch (error) {
+            container.textContent = error.message || "Unable to load claim requests.";
+        }
+    }
 
     // =====================================================
     // UPDATE OFFER
@@ -644,6 +722,8 @@
     loadOwner();
 
     loadBusinesses();
+
+    loadClaimRequests();
 
 </script>
 
