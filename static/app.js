@@ -3,6 +3,7 @@ let currentTab = "nearby";
 let currentCategory = "all";
 let searchText = "";
 let nearbyLoaded = false;
+let manualLocationSelected = false;
 
 const searchInput = document.getElementById("searchInput");
 const businessList = document.getElementById("businessList");
@@ -22,6 +23,39 @@ const profileNav = document.getElementById("profileNav");
 // LOAD NEARBY BUSINESSES
 // =========================================================
 
+async function loadBusinessesAtCoordinates(lat, lng, label) {
+
+    businessList.innerHTML =
+        `<p>Finding businesses near ${label}...</p>`;
+
+    sectionTitle.textContent = label === "your location"
+        ? "Nearby Businesses"
+        : `Businesses near ${label}`;
+
+    try {
+
+        const response = await fetch(
+            `/api/nearby?lat=${lat}&lng=${lng}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to load nearby businesses");
+        }
+
+        allBusinesses = await response.json();
+        nearbyLoaded = true;
+        renderBusinesses();
+
+    } catch (error) {
+
+        console.error(error);
+
+        businessList.innerHTML =
+            "<p>Could not load businesses for this location. Please try again.</p>";
+    }
+}
+
+
 function loadNearbyBusinesses() {
 
     businessList.innerHTML =
@@ -30,65 +64,38 @@ function loadNearbyBusinesses() {
     if (!navigator.geolocation) {
 
         businessList.innerHTML =
-            "<p>Location is not supported by your browser.</p>";
+            "<p>Location is not supported by your browser. Use the Guna location button above.</p>";
 
         return;
     }
 
     navigator.geolocation.getCurrentPosition(
 
-        async function(position) {
+        function(position) {
 
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+            // If the user manually selected a location while this request
+            // was pending, do not overwrite their choice with browser data.
+            if (manualLocationSelected) return;
 
-            try {
-
-                const response = await fetch(
-                    `/api/nearby?lat=${lat}&lng=${lng}`
-                );
-
-                if (!response.ok) {
-                    throw new Error(
-                        "Failed to load nearby businesses"
-                    );
-                }
-
-                allBusinesses = await response.json();
-
-                nearbyLoaded = true;
-
-                renderBusinesses();
-
-            } catch (error) {
-
-                console.error(error);
-
-                businessList.innerHTML =
-                    "<p>Could not load nearby businesses.</p>";
-            }
+            loadBusinessesAtCoordinates(
+                position.coords.latitude,
+                position.coords.longitude,
+                "your location"
+            );
         },
 
         function(error) {
 
             console.error(error);
 
-            if (error.code === 1) {
-
-                businessList.innerHTML =
-                    "<p>Please allow location access to find nearby businesses.</p>";
-
-            } else {
-
-                businessList.innerHTML =
-                    "<p>Unable to get your location.</p>";
-            }
+            businessList.innerHTML =
+                "<p>Couldn't get your device location. Use the Guna location button above, or enable location permissions.</p>";
         },
 
         {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
+            timeout: 15000,
+            maximumAge: 0
         }
     );
 }
@@ -575,6 +582,35 @@ if (searchInput) {
         "input",
         handleSearch
     );
+}
+
+const useGunaLocationButton = document.getElementById("useGunaLocation");
+
+if (useGunaLocationButton) {
+
+    useGunaLocationButton.addEventListener("click", function() {
+
+        manualLocationSelected = true;
+        currentTab = "nearby";
+
+        nearbyTab.classList.add("active");
+        followingTab.classList.remove("active");
+        offersTab.classList.remove("active");
+
+        useGunaLocationButton.textContent = "Loading Guna...";
+        useGunaLocationButton.disabled = true;
+
+        const locationStatus = document.getElementById("locationStatus");
+        if (locationStatus) {
+            locationStatus.textContent = "Using Guna, Madhya Pradesh";
+        }
+
+        loadBusinessesAtCoordinates(24.6467, 77.3113, "Guna, Madhya Pradesh")
+            .finally(function() {
+                useGunaLocationButton.textContent = "Use Guna, MP";
+                useGunaLocationButton.disabled = false;
+            });
+    });
 }
 
 
