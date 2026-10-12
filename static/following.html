@@ -118,6 +118,12 @@
 
 <script>
 
+    function escapeHtml(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function(char) {
+            return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char];
+        });
+    }
+
     async function loadFollowing() {
 
         const list =
@@ -209,22 +215,22 @@
                             <div>
 
                                 <h3>
-                                    🏪 ${business.name}
+                                    🏪 ${escapeHtml(business.name || 'Business')}
                                 </h3>
 
                                 <p>
-                                    ${business.category || "Business"}
+                                    ${escapeHtml(business.category || 'Business')}
                                 </p>
 
                                 ${
                                     business.address
-                                    ? `<p>📍 ${business.address}</p>`
+                                    ? `<p>📍 ${escapeHtml(business.address)}</p>`
                                     : ""
                                 }
 
                                 ${
                                     business.offer
-                                    ? `<p>🎟️ ${business.offer}</p>`
+                                    ? `<p>🎟️ ${escapeHtml(business.offer)}</p>`
                                     : `<p>🎟️ No current offer</p>`
                                 }
 
