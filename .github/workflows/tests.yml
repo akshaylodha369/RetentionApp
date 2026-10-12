@@ -13,6 +13,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install pytest fastapi "uvicorn[standard]" requests python-multipart
+      - run: python -m pip install pytest fastapi "uvicorn[standard]" requests python-multipart httpx2
       - run: python -m compileall -q main.py database.py config.py migrate_businesses.py
       - run: pytest -q
