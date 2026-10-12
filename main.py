@@ -50,6 +50,34 @@ app.mount(
     name="static"
 )
 
+# Optional allowlist: comma-separated trusted origins, e.g. https://example.com.
+# Requests without Origin (normal same-origin browser navigation and CLI tests) remain allowed.
+ALLOWED_ORIGINS = {
+    origin.strip().rstrip("/")
+    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+}
+
+
+@app.middleware("http")
+async def protect_unsafe_cross_origin_requests(request: Request, call_next):
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        origin = request.headers.get("origin")
+        if origin:
+            forwarded_proto = request.headers.get("x-forwarded-proto", "")
+            scheme = forwarded_proto.split(",", 1)[0].strip() or request.url.scheme
+            host = request.headers.get("host", "")
+            expected_origin = f"{scheme}://{host}".rstrip("/")
+            normalized_origin = origin.rstrip("/")
+            if normalized_origin != expected_origin and normalized_origin not in ALLOWED_ORIGINS:
+                return Response(
+                    content='{"detail":"Cross-origin request blocked."}',
+                    status_code=403,
+                    media_type="application/json",
+                )
+    return await call_next(request)
+
+
 init_db()
 
 
@@ -1618,7 +1646,7 @@ def owner_businesses(
 @app.post("/api/businesses/{business_id}/offer")
 def update_offer(
     business_id: int,
-    offer: str = Form(...),
+    offer: str = Form(""),
     session: str | None = Cookie(default=None)
 ):
 
