@@ -75,19 +75,22 @@
         });
         if (!response.ok) throw new Error("Profile request failed.");
         const data = await response.json();
+        // The API currently nests account fields in data.user.
+        // Keep the fallback for older API responses during rollout.
+        const user = data.user || data;
 
         if (!data.logged_in) {
             window.location.replace("/static/login.html?next=%2Fstatic%2Fprofile.html");
             return;
         }
 
-        if (data.role !== "customer") {
-            name.textContent = data.name || "Account";
-            email.textContent = data.email || "";
-            message.textContent = data.role === "owner"
+        if (user.role !== "customer") {
+            name.textContent = user.name || "Account";
+            email.textContent = user.email || "";
+            message.textContent = user.role === "owner"
                 ? "You’re signed in as a business owner. Open the owner dashboard to manage your business."
                 : "This profile is for customer accounts.";
-            if (data.role === "owner") {
+            if (user.role === "owner") {
                 const link = document.createElement("a");
                 link.href = "/static/owner-dashboard.html";
                 link.className = "profile-card-button";
@@ -98,8 +101,8 @@
             return;
         }
 
-        name.textContent = data.name || "Your profile";
-        email.textContent = data.email || "";
+        name.textContent = user.name || "Your profile";
+        email.textContent = user.email || "";
     } catch (error) {
         console.error("Profile load error:", error);
         name.textContent = "Unable to load profile";
