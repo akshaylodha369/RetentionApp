@@ -881,15 +881,18 @@ def delete_session(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM sessions
-        WHERE token_hash = ?
-    """, (
-        token_hash
-    ))
+    try:
+        cursor.execute("""
+            DELETE FROM sessions
+            WHERE token_hash = ?
+        """, (token_hash,))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def delete_expired_sessions(
