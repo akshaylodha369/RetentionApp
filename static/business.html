@@ -434,7 +434,7 @@
                     );
 
                     window.location.href =
-                        "/static/login.html";
+                        "/static/login.html?next=" + encodeURIComponent(window.location.pathname + window.location.search);
 
                     return;
 
