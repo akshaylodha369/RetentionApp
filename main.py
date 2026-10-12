@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import time
+from urllib.parse import urlsplit
 import requests
 import sqlite3
 
@@ -43,6 +44,30 @@ from config import GOOGLE_PLACES_API_KEY
 # =========================================================
 
 app = FastAPI()
+
+
+def is_same_origin_request(origin, host, production):
+    """Validate a browser Origin header against the request host."""
+    if not origin or not host:
+        return False
+
+    try:
+        parsed = urlsplit(origin)
+        if (
+            parsed.username
+            or parsed.password
+            or parsed.path not in ("", "/")
+            or parsed.query
+            or parsed.fragment
+            or parsed.netloc.lower() != host.lower()
+        ):
+            return False
+
+        if production:
+            return parsed.scheme.lower() == "https"
+        return parsed.scheme.lower() in ("http", "https")
+    except (TypeError, ValueError):
+        return False
 
 
 def apply_security_headers(response):
@@ -109,6 +134,35 @@ def check_rate_limit(path, client_id, now=None):
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
+    # Block cross-origin browser mutations that could ride a session cookie.
+    # Admin routes use a separate secret header and are intended for scripts.
+    if (
+        request.url.path.startswith("/api/")
+        and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+        and not request.url.path.startswith("/api/admin/")
+    ):
+        origin = request.headers.get("origin")
+        host = request.headers.get("host", "")
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+
+        if origin and not is_same_origin_request(origin, host, IS_PRODUCTION):
+            response = JSONResponse(
+                status_code=403,
+                content={"detail": "Cross-origin state-changing request blocked."},
+            )
+            apply_security_headers(response)
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
+        if not origin and fetch_site == "cross-site":
+            response = JSONResponse(
+                status_code=403,
+                content={"detail": "Cross-origin state-changing request blocked."},
+            )
+            apply_security_headers(response)
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
     limited_paths = RATE_LIMITS
     if request.url.path in limited_paths:
         client_id = request.client.host if request.client else "unknown"
