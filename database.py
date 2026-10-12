@@ -33,20 +33,20 @@ class PostgresCursor:
 
         statement = sql.strip()
         self.lastrowid = None
-        is_insert = bool(re.match(r"(?is)^INSERT\\s+INTO\\s+", statement))
-        ignored_insert = bool(re.match(r"(?is)^INSERT\\s+OR\\s+IGNORE\\s+INTO\\s+", statement))
+        is_insert = bool(re.match(r"(?is)^INSERT\s+INTO\s+", statement))
+        ignored_insert = bool(re.match(r"(?is)^INSERT\s+OR\s+IGNORE\s+INTO\s+", statement))
         if ignored_insert:
-            statement = re.sub(r"(?is)^INSERT\\s+OR\\s+IGNORE\\s+INTO", "INSERT INTO", statement, count=1)
-            if not re.search(r"(?is)\\bON\\s+CONFLICT\\b", statement):
+            statement = re.sub(r"(?is)^INSERT\s+OR\s+IGNORE\s+INTO", "INSERT INTO", statement, count=1)
+            if not re.search(r"(?is)\bON\s+CONFLICT\b", statement):
                 statement += " ON CONFLICT DO NOTHING"
             is_insert = True
         statement = statement.replace("?", "%s")
-        statement = re.sub(r"(?is)^BEGIN\\s+IMMEDIATE\\s*$", "BEGIN", statement)
-        if is_insert and not re.search(r"(?is)\\bRETURNING\\b", statement):
+        statement = re.sub(r"(?is)^BEGIN\s+IMMEDIATE\s*$", "BEGIN", statement)
+        if is_insert and not re.search(r"(?is)\bRETURNING\b", statement):
             statement += " RETURNING id"
         try:
             self._cursor.execute(statement, params or ())
-            if is_insert and re.search(r"(?is)\\bRETURNING\\s+id\\s*$", statement):
+            if is_insert and re.search(r"(?is)\bRETURNING\s+id\s*$", statement):
                 row = self._cursor.fetchone()
                 self.lastrowid = row[0] if row else None
         except psycopg.IntegrityError as exc:
