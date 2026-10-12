@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Form, Response, Cookie, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import hashlib
@@ -66,9 +66,64 @@ def apply_security_headers(response):
     return response
 
 
+# Lightweight per-process rate limiting for account creation and password login.
+# This is a baseline abuse barrier, not a substitute for shared Redis-backed limits.
+RATE_LIMIT_WINDOW_SECONDS = 15 * 60
+RATE_LIMITS = {
+    "/api/login": 10,
+    "/api/owner/login": 10,
+    "/api/signup": 5,
+    "/api/owner/signup": 5,
+}
+_rate_limit_buckets = {}
+
+
+def check_rate_limit(path, client_id, now=None):
+    """Return retry-after seconds when limited, otherwise None."""
+    if path not in RATE_LIMITS:
+        return None
+
+    now = time.monotonic() if now is None else now
+    key = (path, client_id)
+    bucket = _rate_limit_buckets.get(key)
+
+    if bucket is None or now - bucket[0] >= RATE_LIMIT_WINDOW_SECONDS:
+        _rate_limit_buckets[key] = (now, 1)
+        return None
+
+    started_at, count = bucket
+    if count >= RATE_LIMITS[path]:
+        return max(1, int(RATE_LIMIT_WINDOW_SECONDS - (now - started_at)))
+
+    _rate_limit_buckets[key] = (started_at, count + 1)
+
+    # Bound memory growth if requests come from many distinct addresses.
+    if len(_rate_limit_buckets) > 5000:
+        cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+        for old_key, (old_start, _) in list(_rate_limit_buckets.items()):
+            if now - old_start >= RATE_LIMIT_WINDOW_SECONDS:
+                _rate_limit_buckets.pop(old_key, None)
+
+    return None
+
+
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
-    response = await call_next(request)
+    limited_paths = RATE_LIMITS
+    if request.url.path in limited_paths:
+        client_id = request.client.host if request.client else "unknown"
+        retry_after = check_rate_limit(request.url.path, client_id)
+        if retry_after is not None:
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": "Too many attempts. Please try again later."},
+                headers={"Retry-After": str(retry_after)},
+            )
+        else:
+            response = await call_next(request)
+    else:
+        response = await call_next(request)
+
     apply_security_headers(response)
 
     # Prevent shared/browser caches from retaining account-specific API responses.
