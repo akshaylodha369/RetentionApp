@@ -12,7 +12,75 @@ DB_NAME = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(os.path.a
 # DATABASE CONNECTION
 # =========================================================
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_POSTGRES = bool(DATABASE_URL)
+
+
+class PostgresCursor:
+    """Small compatibility wrapper so existing qmark SQL works on PostgreSQL."""
+
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.lastrowid = None
+
+    @property
+    def rowcount(self):
+        return self._cursor.rowcount
+
+    def execute(self, sql, params=None):
+        import re
+        import psycopg
+
+        statement = sql.strip()
+        self.lastrowid = None
+        is_insert = bool(re.match(r"(?is)^INSERT\s+INTO\s+", statement))
+        ignored_insert = bool(re.match(r"(?is)^INSERT\s+OR\s+IGNORE\s+INTO\s+", statement))
+        if ignored_insert:
+            statement = re.sub(r"(?is)^INSERT\s+OR\s+IGNORE\s+INTO", "INSERT INTO", statement, count=1)
+            if not re.search(r"(?is)\bON\s+CONFLICT\b", statement):
+                statement += " ON CONFLICT DO NOTHING"
+            is_insert = True
+        statement = statement.replace("?", "%s")
+        statement = re.sub(r"(?is)^BEGIN\s+IMMEDIATE\s*$", "BEGIN", statement)
+        if is_insert and not re.search(r"(?is)\bRETURNING\b", statement):
+            statement += " RETURNING id"
+        try:
+            self._cursor.execute(statement, params or ())
+            if is_insert and re.search(r"(?is)\bRETURNING\s+id\s*$", statement):
+                row = self._cursor.fetchone()
+                self.lastrowid = row[0] if row else None
+        except psycopg.IntegrityError as exc:
+            raise sqlite3.IntegrityError(str(exc)) from exc
+        return self
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+
+class PostgresConnection:
+    def __init__(self, connection):
+        self._connection = connection
+
+    def cursor(self):
+        return PostgresCursor(self._connection.cursor())
+
+    def commit(self):
+        self._connection.commit()
+
+    def rollback(self):
+        self._connection.rollback()
+
+    def close(self):
+        self._connection.close()
+
+
 def get_connection():
+    if USE_POSTGRES:
+        import psycopg
+        return PostgresConnection(psycopg.connect(DATABASE_URL, connect_timeout=10))
     parent = os.path.dirname(DB_NAME)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -32,6 +100,63 @@ def init_db():
     cursor = conn.cursor()
 
     # =====================================================
+    if USE_POSTGRES:
+        statements = [
+            """CREATE TABLE IF NOT EXISTS users (
+                id BIGSERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'customer'
+            )""",
+            """CREATE TABLE IF NOT EXISTS businesses (
+                id BIGSERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                category TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                address TEXT,
+                offer TEXT,
+                owner_id BIGINT
+            )""",
+            """CREATE TABLE IF NOT EXISTS follows (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                business_id BIGINT NOT NULL,
+                UNIQUE(user_id, business_id)
+            )""",
+            """CREATE TABLE IF NOT EXISTS sessions (
+                id BIGSERIAL PRIMARY KEY,
+                token_hash TEXT NOT NULL UNIQUE,
+                user_id BIGINT NOT NULL,
+                expires_at BIGINT NOT NULL,
+                created_at BIGINT NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS business_claim_requests (
+                id BIGSERIAL PRIMARY KEY,
+                business_id BIGINT NOT NULL REFERENCES businesses(id),
+                owner_id BIGINT NOT NULL REFERENCES users(id),
+                note TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending', 'approved', 'rejected')),
+                created_at BIGINT NOT NULL,
+                reviewed_at BIGINT,
+                reviewed_by TEXT,
+                UNIQUE(business_id)
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)",
+            "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
+            "CREATE INDEX IF NOT EXISTS idx_claim_requests_status ON business_claim_requests(status, created_at)",
+        ]
+        try:
+            for statement in statements:
+                cursor.execute(statement)
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
     # USERS
     # =====================================================
 
@@ -756,15 +881,17 @@ def delete_session(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM sessions
-        WHERE token_hash = ?
-    """, (
-        token_hash
-    ))
-
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("""
+            DELETE FROM sessions
+            WHERE token_hash = ?
+        """, (token_hash,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def delete_expired_sessions(
@@ -774,15 +901,17 @@ def delete_expired_sessions(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM sessions
-        WHERE expires_at <= ?
-    """, (
-        current_time
-    ))
-
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("""
+            DELETE FROM sessions
+            WHERE expires_at <= ?
+        """, (current_time,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 # =========================================================

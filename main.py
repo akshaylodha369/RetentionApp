@@ -1156,87 +1156,53 @@ def load_businesses(request: Request):
 # =========================================================
 
 @app.post("/api/businesses/{business_id}/follow")
-def toggle_follow(
+def follow_business(
     business_id: int,
     session: str | None = Cookie(default=None)
 ):
-
-    user = require_login(
-        session
-    )
-
+    user = require_login(session)
     conn = get_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT id FROM businesses WHERE id=?",
-        (business_id,)
-    )
-
-    business = cursor.fetchone()
-
-    conn.close()
-
-    if not business:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Business not found."
-        )
-
-    user_id = user[0]
-
-    if is_following(
-        user_id,
-        business_id
-    ):
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
+    try:
+        cursor.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Business not found.")
         cursor.execute(
-            """
-            DELETE FROM follows
-            WHERE user_id=?
-            AND business_id=?
-            """,
-            (
-                user_id,
-                business_id
-            )
+            "INSERT OR IGNORE INTO follows (user_id, business_id) VALUES (?, ?)",
+            (user[0], business_id)
         )
-
         conn.commit()
+        return {"following": True}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
         conn.close()
 
-        return {
-            "following": False
-        }
 
+@app.delete("/api/businesses/{business_id}/follow")
+def unfollow_business(
+    business_id: int,
+    session: str | None = Cookie(default=None)
+):
+    user = require_login(session)
     conn = get_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        INSERT OR IGNORE INTO follows
-        (
-            user_id,
-            business_id
+    try:
+        cursor.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Business not found.")
+        cursor.execute(
+            "DELETE FROM follows WHERE user_id=? AND business_id=?",
+            (user[0], business_id)
         )
-        VALUES (?,?)
-        """,
-        (
-            user_id,
-            business_id
-        )
-    )
-
-    conn.commit()
-    conn.close()
-
-    return {
-        "following": True
-    }
+        conn.commit()
+        return {"following": False}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 # =========================================================
@@ -1248,23 +1214,12 @@ def check_follow(
     business_id: int,
     session: str | None = Cookie(default=None)
 ):
-
-    user = get_current_user(
-        session
-    )
-
+    user = get_current_user(session)
     if not user:
-
-        return {
-            "following": False
-        }
-
-    return {
-        "following": is_following(
-            user[0],
-            business_id
-        )
-    }
+        return {"following": False}
+    if not get_business_by_id(business_id):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    return {"following": is_following(user[0], business_id)}
 
 
 # =========================================================
