@@ -64,16 +64,12 @@ async def protect_unsafe_cross_origin_requests(request: Request, call_next):
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
         if origin:
+            forwarded_proto = request.headers.get("x-forwarded-proto", "")
+            scheme = forwarded_proto.split(",", 1)[0].strip() or request.url.scheme
+            host = request.headers.get("host", "")
+            expected_origin = f"{scheme}://{host}".rstrip("/")
             normalized_origin = origin.rstrip("/")
-            request_host = request.headers.get("host", "").split(":", 1)[0].lower()
-            origin_host = ""
-            try:
-                from urllib.parse import urlparse
-                origin_host = (urlparse(normalized_origin).hostname or "").lower()
-            except ValueError:
-                origin_host = ""
-            same_origin = bool(origin_host and request_host and origin_host == request_host)
-            if not same_origin and normalized_origin not in ALLOWED_ORIGINS:
+            if normalized_origin != expected_origin and normalized_origin not in ALLOWED_ORIGINS:
                 return Response(
                     content='{"detail":"Cross-origin request blocked."}',
                     status_code=403,
