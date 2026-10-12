@@ -1214,59 +1214,57 @@ def toggle_follow(
 
     user_id = user[0]
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    if is_following(
+        user_id,
+        business_id
+    ):
 
-    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
         cursor.execute(
             """
-            INSERT OR IGNORE INTO follows
-            (
-                user_id,
-                business_id
-            )
-            VALUES (?, ?)
+            DELETE FROM follows
+            WHERE user_id=?
+            AND business_id=?
             """,
             (
                 user_id,
                 business_id
             )
         )
+
         conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
         conn.close()
 
-    return {
-        "following": True
-    }
-
-
-@app.delete("/api/businesses/{business_id}/follow")
-def unfollow_business_route(
-    business_id: int,
-    session: str | None = Cookie(default=None)
-):
-    user = require_login(session)
+        return {
+            "following": False
+        }
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    try:
-        cursor.execute(
-            "DELETE FROM follows WHERE user_id = ? AND business_id = ?",
-            (user[0], business_id)
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO follows
+        (
+            user_id,
+            business_id
         )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+        VALUES (?,?)
+        """,
+        (
+            user_id,
+            business_id
+        )
+    )
 
-    return {"following": False}
+    conn.commit()
+    conn.close()
+
+    return {
+        "following": True
+    }
 
 
 # =========================================================
