@@ -401,7 +401,7 @@
                     await fetch(
                         `/api/businesses/${businessId}/follow`,
                         {
-                            method: following ? "DELETE" : "POST",
+                            method: "POST",
                             credentials: "same-origin"
                         }
                     );
