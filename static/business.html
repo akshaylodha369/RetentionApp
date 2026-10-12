@@ -524,7 +524,13 @@
 
         rewardButton.addEventListener(
             "click",
-            toggleFollow
+            function() {
+                if (following) {
+                    alert("You are already following this business. Show the offer above when you visit.");
+                    return;
+                }
+                toggleFollow();
+            }
         );
 
 
