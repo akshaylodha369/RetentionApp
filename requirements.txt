@@ -5,3 +5,4 @@ uvicorn[standard]
 requests
 
 python-multipart
+psycopg[binary]>=3.2,<4
