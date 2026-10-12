@@ -98,7 +98,8 @@
                     await fetch(
                         "/api/me",
                         {
-                            credentials: "same-origin"
+                            credentials: "include",
+                            cache: "no-store"
                         }
                     );
 
@@ -366,6 +367,20 @@
 
         async function toggleFollow() {
 
+            // Recheck the cookie-backed session at click time to avoid stale auth state.
+            try {
+                const sessionResponse = await fetch("/api/me", {
+                    method: "GET",
+                    credentials: "include",
+                    cache: "no-store",
+                    headers: { "Accept": "application/json" }
+                });
+                const sessionData = await sessionResponse.json();
+                loggedIn = sessionResponse.ok && sessionData.logged_in === true;
+            } catch (error) {
+                loggedIn = false;
+            }
+
             if (!loggedIn) {
 
                 alert(
@@ -373,7 +388,7 @@
                 );
 
                 window.location.href =
-                    "/static/login.html";
+                    "/static/login.html?next=" + encodeURIComponent(window.location.pathname + window.location.search);
 
                 return;
 
