@@ -4,7 +4,6 @@
 
 <head>
 
-```
 <meta charset="UTF-8">
 
 <meta
@@ -18,13 +17,11 @@
     rel="stylesheet"
     href="/static/style.css"
 >
-```
 
 </head>
 
 <body>
 
-```
 <!-- =========================
      TOP BAR
 ========================== -->
@@ -152,6 +149,12 @@
     // RENDER OFFERS
     // =========================
 
+    function escapeHtml(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function(char) {
+            return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char];
+        });
+    }
+
     function renderOffers(data) {
 
         offersList.innerHTML = "";
@@ -199,20 +202,20 @@
                 <div class="offer-card">
 
                     <h2>
-                        🎟️ ${business.offer}
+                        🎟️ ${escapeHtml(business.offer)}
                     </h2>
 
                     <h3>
-                        🏪 ${business.name}
+                        🏪 ${escapeHtml(business.name || 'Business')}
                     </h3>
 
                     <p>
-                        ${business.category || "Business"}
+                        ${escapeHtml(business.category || 'Business')}
                     </p>
 
                     ${
                         business.address
-                        ? `<p>📍 ${business.address}</p>`
+                        ? `<p>📍 ${escapeHtml(business.address)}</p>`
                         : ""
                     }
 
@@ -352,7 +355,6 @@
     loadOffers();
 
 </script>
-```
 
 </body>
 
