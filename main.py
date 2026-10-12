@@ -63,17 +63,19 @@ def apply_security_headers(response):
             "max-age=31536000"
         )
 
-    # Authenticated and API responses should not be stored by shared caches.
-    if response.headers.get("Cache-Control") is None:
-        response.headers["Cache-Control"] = "no-store"
-
     return response
 
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
-    return apply_security_headers(response)
+    apply_security_headers(response)
+
+    # Prevent shared/browser caches from retaining account-specific API responses.
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
 
 app.mount(
     "/static",
