@@ -44,6 +44,39 @@ from config import GOOGLE_PLACES_API_KEY
 
 app = FastAPI()
 
+
+def apply_security_headers(response):
+    """Apply baseline browser security headers to every HTTP response."""
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(self)"
+    )
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+
+    if IS_PRODUCTION:
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000"
+        )
+
+    return response
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    apply_security_headers(response)
+
+    # Prevent shared/browser caches from retaining account-specific API responses.
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
+
 app.mount(
     "/static",
     StaticFiles(directory="static"),
