@@ -1646,7 +1646,7 @@ def owner_businesses(
 @app.post("/api/businesses/{business_id}/offer")
 def update_offer(
     business_id: int,
-    offer: str = Form(...),
+    offer: str = Form(""),
     session: str | None = Cookie(default=None)
 ):
 
