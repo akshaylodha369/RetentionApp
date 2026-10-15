@@ -183,3 +183,32 @@ body{background:radial-gradient(ellipse at 5% 5%,#6555f52b,transparent 36%),radi
 .auth-submit{position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s!important}
 .auth-submit:active{transform:scale(.985)!important}
 @media(prefers-reduced-motion:reduce){.auth-brand,.auth-story-copy,.auth-perk,.auth-field{animation:none!important}}
+
+
+/* ===== Responsive authentication screens — Oct 2026 ===== */
+html, body { width:100%; max-width:100%; overflow-x:clip; }
+*, *::before, *::after { box-sizing:border-box; }
+.auth-shell, .auth-story, .auth-panel, .auth-form-wrap, form { min-width:0; max-width:100%; }
+input, button, select, textarea { max-width:100%; }
+@media (max-width:767px) {
+  .auth-shell { width:100% !important; max-width:600px !important; min-height:100dvh; display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:12px !important; padding:12px !important; margin:0 auto; }
+  .auth-story { width:100%; min-width:0; padding:22px 18px !important; }
+  .auth-story-copy { max-width:100% !important; min-width:0; padding-top:18px !important; }
+  .auth-story h1 { font-size:clamp(30px,8vw,42px) !important; line-height:1.08; overflow-wrap:anywhere; }
+  .auth-panel { width:100%; min-width:0; padding:22px 16px !important; }
+  .auth-form-wrap { width:100% !important; max-width:100% !important; }
+  .auth-field, .auth-password { width:100%; min-width:0; }
+  .auth-field input { width:100% !important; min-width:0; font-size:16px !important; }
+  .auth-password { display:flex; gap:6px; }
+  .auth-password input { flex:1 1 auto; }
+  .auth-show { flex:0 0 auto; }
+  .auth-submit { width:100% !important; min-height:46px; }
+  .auth-role-links { display:flex; flex-wrap:wrap; gap:8px; }
+  .auth-role-links a { flex:1 1 100px; text-align:center; }
+  .auth-subtitle, .auth-switch, .auth-legal, .auth-message { overflow-wrap:anywhere; }
+}
+@media (max-width:380px) {
+  .auth-shell { padding:8px !important; }
+  .auth-story, .auth-panel { padding:18px 13px !important; border-radius:18px !important; }
+  .auth-panel h2 { font-size:clamp(25px,8vw,32px) !important; }
+}
