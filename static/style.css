@@ -743,3 +743,70 @@ body.ra-motion-ready .ra-reveal.ra-visible{opacity:1;transform:translate3d(0,0,0
   .filter-btn { padding: 0 7px !important; font-size: 9px !important; }
   .results-panel { padding-left: 8px !important; padding-right: 8px !important; }
 }
+
+
+/* ===== Responsive viewport hardening — Oct 2026 ===== */
+html { width:100%; max-width:100%; overflow-x:clip; }
+body { width:100%; max-width:100%; overflow-x:clip; }
+*, *::before, *::after { box-sizing:border-box; }
+img, svg, video, canvas, iframe { max-width:100%; }
+input, select, textarea, button { max-width:100%; }
+main, section, article, header, footer, nav, form { min-width:0; }
+h1, h2, h3, p, a, button, label, small, strong { overflow-wrap:anywhere; }
+.business-card, .business-info, .profile-card-content, .owner-card, .offer-card { min-width:0; }
+.search-box input, .auth-field input, textarea, select { width:100%; min-width:0; }
+#businessList { min-width:0; max-width:100%; }
+.business-card { display:flex; flex-wrap:wrap; align-items:flex-start; }
+.business-info { flex:1 1 160px; }
+.filters { display:flex; flex-wrap:wrap; }
+.filter-btn { min-width:0; }
+.tabs { display:flex; flex-wrap:wrap; }
+.tabs button { min-width:0; flex:1 1 80px; }
+.results-panel, .search-box, .discover-section, .hero, .closing-note { min-width:0; max-width:100%; }
+@media (max-width: 767px) {
+  main { width:calc(100% - 24px) !important; max-width:100% !important; padding:16px 0 88px !important; }
+  .top-bar { width:100%; padding:10px 12px !important; gap:8px !important; flex-wrap:wrap; }
+  .brand { flex:0 1 auto; min-width:0; }
+  .header-actions { flex:0 1 auto; min-width:0; margin-left:auto; gap:6px !important; flex-wrap:wrap; justify-content:flex-end; }
+  .header-auth-link, .header-owner-link { white-space:normal; text-align:center; min-height:36px; padding:0 8px; }
+  .hero { display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:14px !important; width:100%; min-height:0 !important; padding:28px 18px 72px !important; }
+  .hero-copy, .hero-copy > p { width:100%; max-width:100% !important; min-width:0; }
+  .hero h1 { font-size:clamp(34px, 9vw, 50px) !important; line-height:1.04; letter-spacing:-.055em !important; }
+  .hero-art { position:relative !important; inset:auto !important; width:100% !important; max-width:100%; height:190px !important; margin:0 auto !important; transform:none !important; overflow:hidden; }
+  .art-orbit { max-width:100%; }
+  .hero-bottom { left:14px !important; right:14px !important; gap:5px !important; flex-wrap:wrap; justify-content:space-between; }
+  .hero-bottom > span:not(.hero-bottom-line) { min-width:0; flex:1 1 26%; line-height:1.4; }
+  .discover-section { padding:34px 0 0 !important; }
+  .discover-intro { display:flex; flex-direction:column; align-items:stretch !important; gap:14px; }
+  .discover-intro h2 { font-size:clamp(24px, 6.5vw, 30px) !important; }
+  .location-note { width:100%; max-width:100%; }
+  .search-box { width:100%; }
+  .search-box input { font-size:16px !important; }
+  .filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px !important; }
+  .filter-btn { width:100%; justify-content:center; padding:8px !important; white-space:normal; }
+  .results-panel { width:100%; padding:14px 10px 0 !important; }
+  .tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px !important; }
+  .tabs button { min-width:0; padding:7px 3px !important; white-space:normal; font-size:10px !important; }
+  .section-heading { display:flex; flex-direction:column; align-items:flex-start !important; gap:9px; }
+  #businessList { display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:10px; }
+  .business-card { width:100%; max-width:100%; }
+  .business-info { flex:1 1 140px; }
+  .business-card h3, .business-card p { white-space:normal; overflow-wrap:anywhere; }
+  .results-footer { display:flex; flex-direction:column; align-items:flex-start; gap:8px; line-height:1.5; }
+  .closing-note { display:flex; flex-wrap:wrap; gap:10px; }
+  .profile-page, .business-profile, .welcome, .dashboard-header, .owner-card, .offer-card { width:100%; max-width:100%; padding:clamp(14px,4vw,22px) !important; }
+  .profile-card { display:grid; grid-template-columns:44px minmax(0,1fr) !important; gap:12px; }
+  .profile-card-content { width:100%; }
+  .profile-card-button { grid-column:2; justify-self:start; margin:0 !important; }
+  .dashboard-header h1, .dashboard-header h2, .business-profile h1 { font-size:clamp(23px,6vw,32px) !important; overflow-wrap:anywhere; }
+  .bottom-nav { max-width:calc(100% - 20px); }
+}
+@media (max-width: 380px) {
+  .top-bar { padding-inline:8px !important; }
+  .header-actions { gap:4px !important; }
+  .header-auth-link, .header-owner-link { padding-inline:5px !important; font-size:9px !important; }
+  .hero { padding-inline:14px !important; }
+  .hero h1 { font-size:clamp(31px,9vw,38px) !important; }
+  .hero-bottom { font-size:6px !important; }
+  .results-panel { padding-inline:7px !important; }
+}
