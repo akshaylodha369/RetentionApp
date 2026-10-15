@@ -77,3 +77,42 @@ button,a{-webkit-tap-highlight-color:transparent}
 @media (prefers-reduced-motion: reduce) {
     .auth-shell { animation: none; }
 }
+
+
+/* Unified auth redesign v2 */
+:root{--ink:#172c22;--muted:#7c887d;--paper:#f5f6ef;--surface:#fffefa;--line:#e3e8dd;--green:#23553c;--green-dark:#173e2b;--lime:#d9ed9c}
+body{background:radial-gradient(ellipse at 80% 0%,rgba(217,237,156,.2),transparent 30rem),#f5f6ef}
+.auth-shell{max-width:1200px;grid-template-columns:minmax(310px,.95fr) minmax(360px,1.05fr);gap:18px;padding:20px;min-height:100vh;align-items:center}
+.auth-story{min-height:calc(100vh - 40px);max-height:900px;padding:clamp(28px,4vw,52px);border-radius:30px;background:linear-gradient(145deg,#173e2b,#285b40 70%,#38694a);box-shadow:0 22px 70px rgba(23,62,43,.16)}
+.auth-story h1{font-size:clamp(40px,4.5vw,60px);letter-spacing:-3px;line-height:1.01}
+.auth-story p{font-size:14px;line-height:1.85}
+.auth-brand-mark{border-radius:15px;box-shadow:0 8px 18px #0e2c1b35}
+.auth-perk{padding:15px 16px;border-radius:15px;background:#ffffff0b;backdrop-filter:blur(5px)}
+.auth-perk strong{font-size:13px}.auth-perk small{font-size:11px}
+.auth-panel{padding:clamp(18px,4vw,54px)}
+.auth-form-wrap{width:min(100%,430px)}
+.auth-back{margin-bottom:29px}
+.auth-tag{padding:8px 12px;border:1px solid #dce8d3;letter-spacing:1px}
+.auth-panel h2{font-size:clamp(32px,3.5vw,42px);letter-spacing:-1.8px;margin-top:19px}
+.auth-subtitle{font-size:13px;line-height:1.8;margin-bottom:27px}
+.auth-role-links{padding:5px;border:1px solid #e1e7dc;background:#edf1e8;border-radius:14px}
+.auth-role-links a{padding:12px 9px;border-radius:10px}
+.auth-role-links a.active{box-shadow:0 3px 12px #173e2b10}
+.auth-field{margin-bottom:18px}
+.auth-field label{font-size:12px;margin-bottom:8px}
+.auth-field input{height:51px;padding:0 15px;border-radius:13px;background:#fff}
+.auth-submit{min-height:52px;margin-top:5px;border-radius:13px;font-size:13px;background:linear-gradient(120deg,#23553c,#2e6848);box-shadow:0 10px 22px #23553c24}
+.auth-submit:hover{background:linear-gradient(120deg,#173e2b,#23553c)}
+.auth-switch{margin-top:24px}
+.auth-legal{padding-top:16px;border-top:1px solid #e7eae2}
+@media(max-width:780px){
+ .auth-shell{padding:10px;max-width:540px}
+ .auth-story{min-height:auto;max-height:none;padding:23px;border-radius:22px}
+ .auth-story-copy{padding:25px 0 10px}
+ .auth-story h1{font-size:36px;letter-spacing:-1.7px}
+ .auth-story p{font-size:12px;line-height:1.7}
+ .auth-panel{padding:27px 12px 22px}
+ .auth-back{margin-bottom:21px}
+ .auth-panel h2{font-size:31px}
+}
+@media(min-width:781px) and (max-height:760px){.auth-story{min-height:680px}.auth-shell{align-items:start}}
