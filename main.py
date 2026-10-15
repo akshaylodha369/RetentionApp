@@ -99,6 +99,8 @@ RATE_LIMITS = {
     "/api/owner/login": 10,
     "/api/signup": 5,
     "/api/owner/signup": 5,
+    # Public nearby search calls the paid Google Places API; cap repeated requests.
+    "/api/nearby": 30,
 }
 _rate_limit_buckets = {}
 
