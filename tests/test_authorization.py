@@ -250,3 +250,13 @@ def test_owner_login_persists_a_valid_server_session(app_client):
     assert session.status_code == 200
     assert session.json()["logged_in"] is True
     assert session.json()["user"]["role"] == "owner"
+
+def test_public_nearby_search_is_rate_limited(monkeypatch):
+    monkeypatch.setattr(main, "_rate_limit_buckets", {})
+    assert main.RATE_LIMITS["/api/nearby"] == 30
+
+    for _ in range(30):
+        assert main.check_rate_limit("/api/nearby", "test-client", now=1000) is None
+
+    assert main.check_rate_limit("/api/nearby", "test-client", now=1000) is not None
+
