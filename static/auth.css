@@ -48,3 +48,32 @@ button,a{-webkit-tap-highlight-color:transparent}
 .auth-legal{font-size:10px;line-height:1.6;color:#90988e;margin-top:20px}
 @media(max-width:780px){.auth-shell{display:block;padding:12px;max-width:520px}.auth-story{min-height:auto;padding:23px;border-radius:22px}.auth-story-copy{padding:28px 0 12px}.auth-story h1{font-size:35px;letter-spacing:-1.5px;margin:13px 0 9px}.auth-story p{font-size:12px;margin:0}.auth-perks{display:none}.auth-story-foot{display:none}.auth-panel{padding:28px 12px 20px}.auth-back{margin-bottom:18px}.auth-panel h2{font-size:30px}.auth-subtitle{margin-bottom:20px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* Extra finish for consistent, accessible auth screens */
+.auth-shell { animation: auth-appear .4s ease both; }
+.auth-story { box-shadow: 0 18px 55px rgba(29,70,52,.12); }
+.auth-story:before {
+    content: "";
+    position: absolute;
+    width: 170px; height: 170px;
+    right: 28px; bottom: 28px;
+    border-radius: 44px;
+    border: 1px solid #ffffff18;
+    transform: rotate(22deg);
+    pointer-events: none;
+}
+.auth-panel { border-radius: 28px; }
+.auth-field input, .auth-submit, .auth-role-links, .auth-perk { transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background .18s ease; }
+.auth-field input:hover { border-color: #bdcbbb; }
+.auth-submit:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 12px 24px #275b4328; }
+.auth-role-links a:not(.active):hover { background: #f8faf4; color: var(--green); }
+.auth-back:hover { color: var(--green); }
+@keyframes auth-appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 780px) {
+    .auth-shell { gap: 14px; }
+    .auth-panel { border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .auth-shell { animation: none; }
+}
