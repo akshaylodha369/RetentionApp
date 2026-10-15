@@ -163,3 +163,62 @@ def test_admin_claim_endpoint_fails_closed_without_secret(app_client, monkeypatc
     monkeypatch.delenv("BUSINESS_MIGRATION_SECRET", raising=False)
     response = app_client["client"].get("/api/admin/business-claims")
     assert response.status_code == 404
+
+
+def test_public_business_apis_do_not_expose_internal_owner_ids(app_client):
+    client = app_client["client"]
+
+    all_businesses = client.get("/api/businesses")
+    assert all_businesses.status_code == 200
+    assert all("owner_id" not in business for business in all_businesses.json())
+
+    business_detail = client.get(
+        f"/api/businesses/{app_client['business_a']}"
+    )
+    assert business_detail.status_code == 200
+    assert "owner_id" not in business_detail.json()
+
+
+def test_signup_rejects_email_already_used_by_another_role(app_client):
+    response = app_client["client"].post(
+        "/api/owner/signup",
+        data={
+            "name": "Duplicate Owner",
+            "email": "customer@example.com",
+            "password": "safe-password-123",
+        },
+    )
+    assert response.status_code == 409
+
+
+def test_unknown_login_email_still_runs_password_hash_check(app_client, monkeypatch):
+    calls = []
+    original_verify = main.verify_password
+
+    def record_verify(password, stored_hash):
+        calls.append(stored_hash)
+        return original_verify(password, stored_hash)
+
+    monkeypatch.setattr(main, "verify_password", record_verify)
+    response = app_client["client"].post(
+        "/api/login",
+        data={"email": "missing@example.com", "password": "wrong-password"},
+    )
+
+    assert response.status_code == 401
+    assert calls == [main.DUMMY_PASSWORD_HASH]
+
+
+def test_session_database_stores_only_token_hashes(app_client):
+    token = app_client["tokens"]["customer"]
+    conn = database.get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT token_hash FROM sessions")
+        stored_hashes = {row[0] for row in cursor.fetchall()}
+    finally:
+        conn.close()
+
+    import hashlib
+    assert token not in stored_hashes
+    assert hashlib.sha256(token.encode("utf-8")).hexdigest() in stored_hashes
