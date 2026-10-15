@@ -146,6 +146,8 @@ def init_db():
             )""",
             "CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)",
             "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_businesses_owner_id ON businesses(owner_id)",
+            "CREATE INDEX IF NOT EXISTS idx_follows_business_id ON follows(business_id)",
             "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
             "CREATE INDEX IF NOT EXISTS idx_claim_requests_status ON business_claim_requests(status, created_at)",
         ]
@@ -187,6 +189,11 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_businesses_owner_id
+        ON businesses(owner_id)
+    """)
+
     # =====================================================
     # FOLLOWS
     # =====================================================
@@ -198,6 +205,11 @@ def init_db():
             business_id INTEGER NOT NULL,
             UNIQUE(user_id, business_id)
         )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_follows_business_id
+        ON follows(business_id)
     """)
 
     # =====================================================
