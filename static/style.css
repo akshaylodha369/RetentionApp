@@ -641,3 +641,47 @@ input:focus,textarea:focus,select:focus{border-color:#9b8dff!important;box-shado
  .bottom-nav{left:12px!important;right:12px!important;bottom:10px!important;border-radius:17px!important}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+
+/* ===== Premium motion layer v5 ===== */
+@view-transition{navigation:auto}
+::view-transition-old(root){animation:ra-page-out .22s cubic-bezier(.4,0,1,1) both}
+::view-transition-new(root){animation:ra-page-in .48s cubic-bezier(.16,1,.3,1) both}
+::view-transition-group(root){animation-duration:.48s}
+@keyframes ra-page-in{from{opacity:.35;filter:blur(5px);transform:translateY(10px) scale(.992)}to{opacity:1;filter:blur(0);transform:translateY(0) scale(1)}}
+@keyframes ra-page-out{from{opacity:1;filter:blur(0);transform:scale(1)}to{opacity:.25;filter:blur(4px);transform:scale(.992)}}
+@keyframes ra-enter-up{from{opacity:0;transform:translate3d(0,22px,0);filter:blur(5px)}to{opacity:1;transform:translate3d(0,0,0);filter:blur(0)}}
+@keyframes ra-enter-soft{from{opacity:0;transform:scale(.975);filter:blur(4px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes ra-glow-breathe{0%,100%{box-shadow:0 0 0 1px #8b7cff12,0 16px 42px #0002}50%{box-shadow:0 0 0 1px #8b7cff2c,0 20px 50px #7564ff0c}}
+@keyframes ra-sheen{0%{background-position:140% 0}100%{background-position:-140% 0}}
+@keyframes ra-pulse-dot{0%,100%{box-shadow:0 0 0 0 #a4f4d000}50%{box-shadow:0 0 0 7px #a4f4d015}}
+body{animation:ra-enter-soft .48s cubic-bezier(.16,1,.3,1) both}
+.hero-copy>*{animation:ra-enter-up .7s cubic-bezier(.16,1,.3,1) both}
+.hero-copy>*:nth-child(1){animation-delay:.06s}.hero-copy>*:nth-child(2){animation-delay:.12s}.hero-copy>*:nth-child(3){animation-delay:.18s}.hero-copy>*:nth-child(4){animation-delay:.24s}.hero-copy>*:nth-child(5){animation-delay:.3s}
+.hero-art{animation:ra-enter-soft .95s cubic-bezier(.16,1,.3,1) .14s both}
+.hero-bottom{animation:ra-enter-up .65s cubic-bezier(.16,1,.3,1) .28s both}
+.ra-reveal{opacity:1;transform:none}
+body.ra-motion-ready .ra-reveal{opacity:0;transform:translate3d(0,22px,0);filter:blur(4px);transition:opacity .65s cubic-bezier(.16,1,.3,1),transform .65s cubic-bezier(.16,1,.3,1),filter .65s cubic-bezier(.16,1,.3,1)}
+body.ra-motion-ready .ra-reveal.ra-visible{opacity:1;transform:translate3d(0,0,0);filter:blur(0)}
+.ra-reveal.ra-stagger-1{transition-delay:.06s!important}.ra-reveal.ra-stagger-2{transition-delay:.12s!important}.ra-reveal.ra-stagger-3{transition-delay:.18s!important}.ra-reveal.ra-stagger-4{transition-delay:.24s!important}.ra-reveal.ra-stagger-5{transition-delay:.3s!important}
+.business-card,.offer-card,.profile-card,.owner-card,.business-card-owner,.auth-perk,.filter-btn,.tabs button,.hero-cta,.auth-submit,.update-button,.header-auth-link,.header-owner-link,.bottom-nav button,.profile-card-button,#followButton,#rewardButton{will-change:transform;transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s,background-color .28s,color .2s!important}
+.business-card:hover,.offer-card:hover,.profile-card:hover,.owner-card:hover,.business-card-owner:hover{transform:translate3d(0,-5px,0)!important}
+.hero-cta:active,.auth-submit:active,.update-button:active,.profile-card-button:active,#followButton:active,#rewardButton:active,.filter-btn:active{transform:translateY(1px) scale(.985)!important}
+.filter-btn.active,.tabs button.active{animation:ra-enter-soft .24s ease both}
+.status-dot,.nearby-badge span{animation:ra-pulse-dot 3s ease-in-out infinite}
+.search-box:focus-within{transition:box-shadow .3s,border-color .3s,transform .3s!important;transform:translateY(-1px)}
+.hero-cta{background-size:180% 100%!important;position:relative;overflow:hidden}
+.hero-cta:after,.auth-submit:after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(110deg,transparent 20%,#ffffff5c 48%,transparent 72%);background-size:220% 100%;background-position:140% 0;transition:background-position .65s ease}
+.hero-cta:hover:after,.auth-submit:hover:after{background-position:-140% 0}
+.art-orbit{transform-origin:center;will-change:transform}
+.business-icon,.profile-icon,.profile-card-icon{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s!important}
+.business-card:hover .business-icon,.profile-card:hover .profile-card-icon{transform:translateY(-2px) rotate(-4deg) scale(1.06)!important;box-shadow:0 10px 24px #7564ff25!important}
+.auth-panel,.auth-story,.dashboard-header,.business-profile,.profile-page{animation:ra-enter-up .7s cubic-bezier(.16,1,.3,1) both}
+.auth-panel{animation-delay:.08s}.auth-story{animation-delay:.02s}
+@media(hover:hover) and (pointer:fine){.ra-tilt{transform-style:preserve-3d;transition:transform .2s ease-out,box-shadow .25s!important}}
+@media(max-width:760px){body{animation-duration:.35s}.ra-reveal{transform:translateY(12px)}}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;view-transition-name:none!important}
+ @view-transition{navigation:none}
+ body{animation:none!important}
+}
