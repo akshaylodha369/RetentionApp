@@ -201,6 +201,13 @@ init_db()
 
 PASSWORD_ITERATIONS = 100000
 
+# A valid fixed-format hash used for missing accounts, so login failures
+# still perform PBKDF2 work and reveal less about whether an email exists.
+DUMMY_PASSWORD_HASH = hashlib.pbkdf2_hmac(
+    "sha256", b"not-a-real-password", bytes.fromhex("00112233445566778899aabbccddeeff"), PASSWORD_ITERATIONS
+).hex()
+DUMMY_PASSWORD_HASH = "00112233445566778899aabbccddeeff:" + DUMMY_PASSWORD_HASH
+
 SESSION_MAX_AGE = 60 * 60 * 24 * 30
 
 SESSION_COOKIE_NAME = "session"
@@ -296,6 +303,10 @@ def get_user_by_email_and_role(
 def create_secure_session(
     user_id
 ):
+
+    # Remove expired session records during successful sign-ins to keep the
+    # database from retaining stale session metadata indefinitely.
+    delete_expired_sessions(int(time.time()))
 
     raw_token = secrets.token_urlsafe(48)
 
@@ -453,16 +464,18 @@ def signup(
             detail="Password must be at least 8 characters."
         )
 
-    existing_customer = get_user_by_email_and_role(
-        email,
-        "customer"
-    )
-
-    if existing_customer:
-
+    if len(password) > 1024:
         raise HTTPException(
             status_code=400,
-            detail="Customer account already exists for this email."
+            detail="Password must be 1024 characters or fewer."
+        )
+
+    existing_account = get_user_by_email(email)
+
+    if existing_account:
+        raise HTTPException(
+            status_code=409,
+            detail="An account already exists for this email. Please use the matching login."
         )
 
     password_hash = hash_password(
@@ -510,7 +523,6 @@ def signup(
 
     return {
         "success": True,
-        "user_id": user_id,
         "role": "customer"
     }
 
@@ -535,13 +547,16 @@ def login(
             detail="Please enter a valid email address."
         )
 
+    if len(password) > 1024:
+        raise HTTPException(status_code=400, detail="Password must be 1024 characters or fewer.")
+
     user = get_user_by_email_and_role(
         email,
         "customer"
     )
 
     if not user:
-
+        verify_password(password, DUMMY_PASSWORD_HASH)
         raise HTTPException(
             status_code=401,
             detail="Invalid customer email or password."
@@ -655,7 +670,6 @@ def businesses():
             "longitude": row[4],
             "address": row[5],
             "offer": row[6],
-            "owner_id": row[7]
         }
         for row in rows
     ]
@@ -689,7 +703,6 @@ def business_detail(
         "longitude": row[4],
         "address": row[5],
         "offer": row[6],
-        "owner_id": row[7]
     }
 
 
@@ -1148,7 +1161,6 @@ def nearby(
             "longitude": row[4],
             "address": row[5],
             "offer": row[6],
-            "owner_id": row[7],
             "distance_km": round(
                 distance_km,
                 2
@@ -1396,7 +1408,6 @@ def following(
             "longitude": row[4],
             "address": row[5],
             "offer": row[6],
-            "owner_id": row[7]
         }
         for row in rows
     ]
@@ -1558,16 +1569,18 @@ def owner_signup(
             detail="Password must be at least 8 characters."
         )
 
-    existing_owner = get_user_by_email_and_role(
-        email,
-        "owner"
-    )
-
-    if existing_owner:
-
+    if len(password) > 1024:
         raise HTTPException(
             status_code=400,
-            detail="Owner account already exists for this email."
+            detail="Password must be 1024 characters or fewer."
+        )
+
+    existing_account = get_user_by_email(email)
+
+    if existing_account:
+        raise HTTPException(
+            status_code=409,
+            detail="An account already exists for this email. Please use the matching login."
         )
 
     password_hash = hash_password(
@@ -1615,7 +1628,6 @@ def owner_signup(
 
     return {
         "success": True,
-        "owner_id": owner_id,
         "role": "owner"
     }
 
@@ -1640,13 +1652,16 @@ def owner_login(
             detail="Please enter a valid email address."
         )
 
+    if len(password) > 1024:
+        raise HTTPException(status_code=400, detail="Password must be 1024 characters or fewer.")
+
     user = get_user_by_email_and_role(
         email,
         "owner"
     )
 
     if not user:
-
+        verify_password(password, DUMMY_PASSWORD_HASH)
         raise HTTPException(
             status_code=401,
             detail="Invalid owner email or password."
@@ -1708,7 +1723,6 @@ def owner_businesses(
             "longitude": row[4],
             "address": row[5],
             "offer": row[6],
-            "owner_id": row[7]
         }
         for row in rows
     ]
