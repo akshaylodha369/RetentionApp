@@ -183,3 +183,37 @@ body{background:radial-gradient(ellipse at 5% 5%,#6555f52b,transparent 36%),radi
 .auth-submit{position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s!important}
 .auth-submit:active{transform:scale(.985)!important}
 @media(prefers-reduced-motion:reduce){.auth-brand,.auth-story-copy,.auth-perk,.auth-field{animation:none!important}}
+
+
+/* Mobile viewport safety: keep auth forms inside the visible portrait width. */
+html, body { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
+*, *::before, *::after { box-sizing:border-box; }
+img, svg { max-width:100%; }
+input, select, textarea, button { max-width:100%; }
+@media (max-width:767px) {
+  .auth-shell {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100% !important; max-width:100% !important; min-width:0 !important;
+    min-height:100dvh; margin:0 auto !important;
+    padding:14px !important; gap:14px !important;
+  }
+  .auth-story {
+    display:none !important;
+    width:100% !important; max-width:100% !important; min-width:0 !important;
+    min-height:0 !important;
+  }
+  .auth-panel, .auth-form, .auth-card, .auth-container {
+    width:100% !important; max-width:100% !important; min-width:0 !important;
+    margin:0 auto !important;
+  }
+  .auth-panel { padding:24px 18px !important; }
+  .auth-panel form, .auth-form form { width:100%; min-width:0; }
+  input, select, textarea { width:100% !important; min-width:0 !important; font-size:16px; }
+  button, .btn, .auth-submit { max-width:100%; min-height:44px; }
+}
+@media (max-width:420px) {
+  .auth-shell { padding:10px !important; }
+  .auth-panel { padding:20px 14px !important; border-radius:18px; }
+  .auth-panel h1, .auth-panel h2 { font-size:clamp(26px,8vw,34px); overflow-wrap:anywhere; }
+}

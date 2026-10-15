@@ -743,3 +743,81 @@ body.ra-motion-ready .ra-reveal.ra-visible{opacity:1;transform:translate3d(0,0,0
   .filter-btn { padding: 0 7px !important; font-size: 9px !important; }
   .results-panel { padding-left: 8px !important; padding-right: 8px !important; }
 }
+
+
+/* ===== Portrait-first responsive layout hardening ===== */
+html, body { width:100%; max-width:100%; min-width:0; }
+body { overflow-x:clip; }
+img, video, iframe, canvas, svg { max-width:100%; }
+input, select, textarea, button { max-width:100%; }
+main, section, article, header, footer, nav, form, .container, .content,
+.page-content, .dashboard, .dashboard-content, .business-profile,
+.profile-page, .results-panel, .discover-section, .auth-container {
+  min-width:0;
+}
+p, h1, h2, h3, a, button, label, span { overflow-wrap:break-word; }
+@media (max-width: 767px) {
+  html { scroll-padding-top:72px; }
+  body { width:100%; }
+  .top-bar {
+    width:100%; max-width:100%; flex-wrap:wrap;
+    padding:12px 16px; gap:10px;
+  }
+  .brand { min-width:0; max-width:100%; }
+  .header-actions { min-width:0; max-width:100%; flex-wrap:wrap; }
+  main {
+    width:calc(100% - 28px); max-width:100%; min-width:0;
+    margin-left:auto; margin-right:auto;
+  }
+  .hero, .discover-section, .results-panel, .business-section,
+  .profile-page, .business-profile, .dashboard-header,
+  .owner-dashboard, .dashboard-content {
+    width:100%; max-width:100%; min-width:0;
+  }
+  .hero { grid-template-columns:minmax(0,1fr); }
+  .hero-copy, .hero-art { min-width:0; max-width:100%; }
+  .hero-art { margin-inline:auto; }
+  .filters, .tabs, .results-footer, .section-heading {
+    max-width:100%; flex-wrap:wrap;
+  }
+  .filters { row-gap:8px; }
+  .filter-btn { max-width:100%; }
+  .business-grid, .business-list, .results-grid, .dashboard-grid,
+  .stats-grid, .owner-grid, .profile-grid {
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+  .business-card, .profile-card, .owner-card, .business-card-owner,
+  .offer-box, .results-panel {
+    min-width:0; max-width:100%;
+  }
+  .business-card { flex-wrap:wrap; }
+  .business-info { flex:1 1 180px; min-width:0; }
+  .business-card-actions, .card-actions { flex-wrap:wrap; max-width:100%; }
+  .auth-container, .auth-shell {
+    width:100%; max-width:100%; min-width:0;
+    margin:0 auto; padding:16px !important;
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+  .auth-card, .auth-panel, .auth-story, .auth-form,
+  .login-card, .signup-card {
+    width:100%; max-width:100%; min-width:0;
+  }
+  .auth-story { min-height:0; }
+  .auth-panel { padding:24px 18px; }
+  .dashboard-header { flex-wrap:wrap; gap:12px; }
+  .owner-card, .business-card-owner { padding:16px; }
+  .owner-card form, .business-card-owner form { min-width:0; }
+  input, select, textarea { width:100%; min-width:0; }
+  button, .button, .btn { min-height:40px; }
+  table { display:block; width:100%; max-width:100%; overflow-x:auto; }
+}
+@media (max-width: 420px) {
+  .top-bar { padding:10px 10px; gap:7px; }
+  .header-actions { gap:5px; }
+  main { width:calc(100% - 20px); }
+  .hero { padding-inline:15px; }
+  .hero h1 { font-size:clamp(32px,10vw,42px); }
+  .business-card, .owner-card, .business-card-owner { padding:12px; }
+  .auth-container, .auth-shell { padding:10px !important; }
+  .auth-panel { padding:20px 14px; }
+}
