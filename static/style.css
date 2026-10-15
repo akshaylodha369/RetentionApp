@@ -194,3 +194,144 @@ body:has(form) .role-box a.active{background:white;color:var(--green);box-shadow
 .header-owner-link{background:var(--green);color:white}
 .header-auth-link:hover,.header-owner-link:hover{transform:translateY(-1px)}
 @media(max-width:760px){.header-actions{gap:8px}.header-note{display:none}.header-auth-link,.header-owner-link{min-height:37px;padding:0 10px;font-size:10px}.top-bar{padding:12px 16px}.brand-mark{width:38px;height:38px}.brand-text small{display:none}}
+
+
+/* RetentionApp visual polish — consistent premium surfaces across every page */
+:root {
+    --shadow-soft: 0 8px 24px rgba(29,48,39,.055);
+    --shadow-lift: 0 18px 44px rgba(29,48,39,.11);
+}
+body:not(.home-page) {
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(217,237,156,.18), transparent 32rem),
+      var(--paper);
+}
+button, input, textarea, select { accent-color: var(--green); }
+button, a, .business-card, .owner-card, .profile-card, .offer-card {
+    -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled) { transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease; }
+button:not(:disabled):active { transform: translateY(1px); }
+.top-bar {
+    box-shadow: 0 1px 0 rgba(29,48,39,.025);
+}
+.profile-page, .welcome, .business-section, main:has(.business-profile), main:has(.dashboard-header) {
+    animation: retention-enter .42s ease both;
+}
+@keyframes retention-enter {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Customer profile and owner dashboard */
+.profile-page { max-width: 900px; margin: 0 auto; padding: 42px 24px 90px; }
+.profile-page h1, .welcome h1, .dashboard-header h1, .dashboard-header h2 {
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: -1.25px;
+}
+.profile-page h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.08; }
+.profile-card, .owner-card, .offer-card, .offer-box, .business-card {
+    border: 1px solid rgba(29,48,39,.085);
+    border-radius: 20px;
+    background: rgba(255,254,250,.94);
+    box-shadow: var(--shadow-soft);
+}
+.profile-card, .owner-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.profile-card:hover, .owner-card:hover, .business-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(39,91,67,.2);
+    box-shadow: var(--shadow-lift);
+}
+.profile-card-icon, .business-logo {
+    border-radius: 16px;
+    background: linear-gradient(145deg, #eaf2e3, #f7f0df);
+}
+.profile-card-button, .update-button, .logout-button, .offer-action {
+    min-height: 43px;
+    border-radius: 12px;
+    font-weight: 800;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.profile-card-button:hover, .update-button:hover, .offer-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(39,91,67,.15);
+}
+.logout-button {
+    border: 1px solid #e5e8de;
+    background: #fffefa;
+    color: #5e6c60;
+}
+.logout-button:hover { border-color: #cbd5c7; background: #f5f7f0; }
+/* Following, offers and discovery result cards */
+.welcome { padding-top: 28px; }
+.welcome h1 { font-size: clamp(29px, 4vw, 40px); }
+.business-section { margin-top: 22px; }
+.business-card { overflow: hidden; }
+.business-card img { border-radius: 13px; }
+.offer-card { overflow: hidden; }
+.offer-card h2, .offer-card h3 { font-family: 'Manrope', sans-serif; letter-spacing: -.5px; }
+.offer-card p { line-height: 1.7; }
+.offer-action { border: 0; background: var(--green); color: white; padding: 0 17px; }
+.offer-action:hover { background: var(--green-dark); }
+.back-button { border-radius: 13px; transition: background .18s ease, transform .18s ease; }
+.back-button:hover { background: var(--green-pale); transform: translateX(-2px); }
+/* Individual business page */
+main:has(.business-profile) { width: min(100% - 32px, 920px); padding-top: 46px; }
+.business-profile {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(25px, 5vw, 46px);
+    border: 1px solid rgba(29,48,39,.08);
+    border-radius: 28px;
+    background: linear-gradient(135deg, #fffefa 0%, #f1f5e9 100%);
+    box-shadow: var(--shadow-soft);
+}
+.business-profile:after {
+    content: "";
+    position: absolute;
+    right: -95px; top: -115px;
+    width: 260px; height: 260px;
+    border: 1px solid rgba(39,91,67,.1);
+    border-radius: 50%;
+    box-shadow: 0 0 0 28px rgba(39,91,67,.025), 0 0 0 56px rgba(39,91,67,.02);
+    pointer-events: none;
+}
+.business-profile > * { position: relative; z-index: 1; }
+.business-profile h1 { font-family: 'Manrope', sans-serif; font-size: clamp(30px, 5vw, 44px); letter-spacing: -1.5px; }
+.business-profile p { color: var(--ink-soft); line-height: 1.75; }
+.business-profile button, #followButton, #rewardButton {
+    min-height: 46px; padding: 0 20px; border: 0; border-radius: 13px;
+    background: var(--green); color: #fff; font-weight: 800;
+    box-shadow: 0 8px 18px rgba(39,91,67,.15);
+}
+.business-profile button:hover, #followButton:hover, #rewardButton:hover { background: var(--green-dark); transform: translateY(-2px); }
+main:has(.business-profile) .offer-card { margin-top: 20px; padding: clamp(22px, 4vw, 34px); }
+main:has(.business-profile) .offer-card h2 { font-family: 'Manrope', sans-serif; font-size: 23px; letter-spacing: -.7px; }
+main:has(.dashboard-header) { width: min(100% - 32px, 1050px); padding-top: 34px; }
+.dashboard-header { padding: 30px; border-radius: 24px; background: linear-gradient(120deg, #244b39, #315f46); color: white; box-shadow: var(--shadow-soft); }
+.dashboard-header p { color: rgba(255,255,255,.75); line-height: 1.7; }
+.owner-card { padding: clamp(18px, 3vw, 26px); }
+.offer-box { padding: 20px; background: #f8f8f1; }
+.update-button { border: 0; background: var(--green); color: white; padding: 0 18px; }
+.update-button:hover { background: var(--green-dark); }
+input, textarea, select {
+    border-radius: 12px;
+    border-color: #dce2d7;
+}
+input:focus, textarea:focus, select:focus {
+    border-color: #719476;
+    box-shadow: 0 0 0 4px rgba(39,91,67,.09);
+    outline: none;
+}
+.loading-state { color: var(--muted); }
+.loading-spinner { border-color: #dfe8d7; border-top-color: var(--green); }
+@media (max-width: 700px) {
+    .profile-page { padding: 26px 16px 84px; }
+    .dashboard-header { padding: 23px 19px; border-radius: 20px; }
+    main:has(.business-profile), main:has(.dashboard-header) { width: min(100% - 24px, 920px); padding-top: 20px; }
+    .business-profile { border-radius: 21px; }
+    .profile-card, .owner-card, .offer-card, .offer-box, .business-card { border-radius: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .profile-page, .welcome, .business-section, main:has(.business-profile), main:has(.dashboard-header) { animation: none; }
+    button, a, .business-card, .owner-card, .profile-card { transition: none !important; }
+}
