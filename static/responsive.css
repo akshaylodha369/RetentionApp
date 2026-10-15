@@ -227,3 +227,78 @@ pre, code { max-width: 100%; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Mobile viewport and overflow fixes: final overrides for every customer/owner page */
+html, body {
+  max-inline-size: 100%;
+  overflow-x: clip;
+}
+body {
+  overflow-wrap: break-word;
+}
+main, .auth-shell, .auth-story, .auth-panel, .auth-form-wrap,
+.hero, .hero-copy, .hero-art, .discover-section, .results-panel,
+.profile-page, .business-profile, .dashboard-header, .owner-card,
+.business-card-owner, .offer-card, .profile-card, .offer-box {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+button, input, select, textarea {
+  max-inline-size: 100%;
+}
+table {
+  display: block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+pre, code, a, p, h1, h2, h3, label {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .hero:before {
+    width: min(115vw, 430px) !important;
+    height: min(115vw, 430px) !important;
+    right: -35vw !important;
+    top: -42vw !important;
+  }
+  .auth-story:after {
+    width: min(95vw, 360px) !important;
+    height: min(95vw, 360px) !important;
+    right: -42vw !important;
+    top: 8% !important;
+  }
+  .auth-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start;
+  }
+  .auth-story, .auth-panel, .auth-form-wrap,
+  .auth-form, .auth-field, .auth-password {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .auth-story h1, .dashboard-header h2 {
+    overflow-wrap: anywhere;
+  }
+  .top-bar {
+    max-width: 100%;
+  }
+  .header-actions {
+    flex-wrap: wrap;
+  }
+  .business-card, .profile-card, .business-card-owner {
+    min-width: 0;
+  }
+  .business-card-owner, .owner-card, .offer-card, .profile-card {
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 360px) {
+  .brand-text small { font-size: 9px; }
+  .brand-mark { width: 36px; height: 36px; }
+  .header-auth-link, .header-owner-link { font-size: 9px !important; }
+  .hero-badge { max-width: 100%; letter-spacing: .7px; font-size: 8px; }
+  .tabs button { font-size: 9px !important; }
+}
