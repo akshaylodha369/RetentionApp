@@ -304,6 +304,10 @@ def create_secure_session(
     user_id
 ):
 
+    # Remove expired session records during successful sign-ins to keep the
+    # database from retaining stale session metadata indefinitely.
+    delete_expired_sessions(int(time.time()))
+
     raw_token = secrets.token_urlsafe(48)
 
     token_hash = hashlib.sha256(
@@ -466,16 +470,12 @@ def signup(
             detail="Password must be 1024 characters or fewer."
         )
 
-    existing_customer = get_user_by_email_and_role(
-        email,
-        "customer"
-    )
+    existing_account = get_user_by_email(email)
 
-    if existing_customer:
-
+    if existing_account:
         raise HTTPException(
-            status_code=400,
-            detail="Customer account already exists for this email."
+            status_code=409,
+            detail="An account already exists for this email. Please use the matching login."
         )
 
     password_hash = hash_password(
@@ -1575,16 +1575,12 @@ def owner_signup(
             detail="Password must be 1024 characters or fewer."
         )
 
-    existing_owner = get_user_by_email_and_role(
-        email,
-        "owner"
-    )
+    existing_account = get_user_by_email(email)
 
-    if existing_owner:
-
+    if existing_account:
         raise HTTPException(
-            status_code=400,
-            detail="Owner account already exists for this email."
+            status_code=409,
+            detail="An account already exists for this email. Please use the matching login."
         )
 
     password_hash = hash_password(
