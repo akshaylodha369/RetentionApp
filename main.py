@@ -400,9 +400,15 @@ def set_session_cookie(
 @app.get("/")
 def home():
 
-    return FileResponse(
-        "static/index.html"
+    response = FileResponse(
+        "static/index.html",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
     )
+    return response
 
 
 # =========================================================
