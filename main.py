@@ -81,6 +81,23 @@ def apply_security_headers(response):
     )
     response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
     response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    # Compatible CSP for the current frontend: pages still use inline scripts/styles,
+    # and the shared stylesheet imports Google Fonts. Tighten inline allowances in a
+    # separate change after migrating those blocks to external files/nonces.
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "upgrade-insecure-requests"
+    )
 
     if IS_PRODUCTION:
         response.headers.setdefault(
@@ -193,6 +210,21 @@ app.mount(
     StaticFiles(directory="static"),
     name="static"
 )
+
+
+@app.get("/.well-known/security.txt", include_in_schema=False)
+def security_txt():
+    """Publish a minimal security contact for responsible vulnerability reports."""
+    return Response(
+        content=(
+            "Contact: https://github.com/akshaylodha369/RetentionApp\n"
+            "Preferred-Languages: en\n"
+            "Expires: 2027-10-15T00:00:00Z\n"
+        ),
+        media_type="text/plain",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
 
 init_db()
 
