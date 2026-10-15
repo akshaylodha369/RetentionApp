@@ -335,3 +335,143 @@ input:focus, textarea:focus, select:focus {
     .profile-page, .welcome, .business-section, main:has(.business-profile), main:has(.dashboard-header) { animation: none; }
     button, a, .business-card, .owner-card, .profile-card { transition: none !important; }
 }
+
+
+/* Full experience redesign v2 — discovery, profiles, business pages and owner workspace */
+:root{
+ --ink:#172c22;--ink-soft:#46594c;--muted:#7c887d;--paper:#f5f6ef;--surface:#fffefa;
+ --line:#e3e8dd;--green:#23553c;--green-dark:#173e2b;--green-pale:#eaf1e4;--lime:#d9ed9c;
+ --shadow:0 18px 55px rgba(25,54,35,.075);--shadow-soft:0 7px 24px rgba(25,54,35,.055);
+ --radius:24px;
+}
+body{background:radial-gradient(ellipse at 88% 0%,rgba(217,237,156,.16),transparent 34rem),var(--paper);color:var(--ink)}
+.top-bar{padding-top:13px;padding-bottom:13px;background:rgba(249,250,245,.88);border-bottom:1px solid rgba(35,85,60,.09)}
+.brand-mark,.closing-mark{box-shadow:0 5px 14px rgba(35,85,60,.16);border-radius:14px}
+.brand-text strong{font-size:19px}
+main{width:min(100% - 48px,1240px);padding-top:24px}
+.hero{min-height:485px;grid-template-columns:1.04fr .96fr;gap:32px;padding:62px 64px 82px;border-radius:32px;background:linear-gradient(120deg,#193e2b 0%,#285b40 56%,#356849 100%);box-shadow:0 25px 70px rgba(24,63,41,.16)}
+.hero:before{right:-65px;top:-275px;width:620px;height:620px;box-shadow:0 0 0 55px rgba(238,246,219,.035),0 0 0 110px rgba(238,246,219,.025)}
+.hero h1{font-size:clamp(48px,5.4vw,74px);line-height:.99;letter-spacing:-4.2px}
+.hero-copy>p{font-size:15px;max-width:450px}
+.hero-badge{letter-spacing:1.5px}
+.hero-cta{min-height:49px;padding:0 19px;border-radius:14px;box-shadow:0 8px 22px rgba(7,29,17,.15)}
+.hero-art{height:335px}
+.tile-main{width:205px;height:238px;border-radius:24px;box-shadow:0 25px 65px rgba(10,32,20,.3)}
+.tile-emoji{background:linear-gradient(145deg,#eadfc8,#d6c09b);font-size:79px}
+.tile-small{border-radius:17px}
+.hero-bottom{left:64px;right:64px;min-height:57px}
+.discover-section{padding:76px 16px 0}
+.discover-intro{margin-bottom:29px}
+.discover-intro h2{font-size:clamp(30px,3.5vw,42px);letter-spacing:-1.8px}
+.section-eyebrow{letter-spacing:1.8px}
+.location-note{padding:13px 17px;border-radius:16px;box-shadow:var(--shadow-soft)}
+.search-box{min-height:66px;border-radius:18px;background:#fff;box-shadow:0 9px 30px rgba(36,63,44,.04)}
+.search-box input{height:64px;font-size:14px}
+.filters{gap:10px;margin-bottom:30px}
+.filter-btn{min-height:43px;padding:0 17px;border-radius:13px;background:#fff;border-color:#e2e7dc}
+.filter-btn.active{background:var(--green);border-color:var(--green);box-shadow:0 6px 15px rgba(35,85,60,.14)}
+.results-panel{padding:26px 28px 0;border-radius:26px;background:rgba(255,254,250,.9);box-shadow:0 18px 55px rgba(33,55,41,.055)}
+.tabs{gap:9px;margin-bottom:29px;padding-bottom:17px}
+.tabs button{min-height:43px;padding:0 17px;border-radius:12px}
+.tabs button.active{background:#eaf2e4;border-color:#dbe7d3}
+.section-heading{margin-bottom:19px}
+.business-section h2{font-size:26px}
+.nearby-badge{padding:9px 13px}
+.business-card{gap:18px;margin-bottom:13px;padding:18px;border-radius:19px;background:#fff;box-shadow:0 5px 18px rgba(25,54,35,.035)}
+.business-card:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(25,54,35,.09)}
+.business-icon{flex-basis:66px;width:66px;height:66px;border-radius:18px;font-size:27px}
+.business-info h3,.business-card h3{font-family:'Manrope',sans-serif;font-size:16px;letter-spacing:-.3px}
+.business-category{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin:5px 0 7px;padding:5px 9px;border-radius:999px;background:#eff4e9;color:#58734e;font-size:10px;font-weight:800}
+.business-address{font-size:11px;color:#7b857a}
+.business-distance{font-size:10px;font-weight:700;color:#526d4f}
+.business-offer{border-radius:10px;background:#fff5e8;color:#8c5c29;font-weight:700}
+.results-footer{margin-top:12px;padding:17px 0;border-top:1px solid var(--line)}
+.closing-note{margin-top:30px;padding:22px 24px;border:1px solid var(--line);border-radius:21px;background:rgba(255,254,250,.72)}
+.closing-mark{width:38px;height:38px;font-size:23px}
+.bottom-nav{box-shadow:0 10px 35px rgba(23,48,33,.14);border:1px solid rgba(255,255,255,.6)}
+.profile-page{max-width:940px;padding-top:48px}
+.profile-icon{display:grid;place-items:center;width:62px;height:62px;border-radius:20px;background:#e8f0e3;font-size:28px;box-shadow:var(--shadow-soft)}
+.profile-page h1,.welcome h1,.dashboard-header h1,.dashboard-header h2{letter-spacing:-1.7px}
+.profile-card{padding:22px;gap:18px}
+.profile-card-icon{width:52px;height:52px;border-radius:16px}
+.profile-card-content h3{font-size:16px}
+.profile-card-button{padding:0 16px;text-decoration:none;background:var(--green);color:white;border:0}
+.dashboard-header{position:relative;overflow:hidden;padding:36px;border-radius:27px;background:linear-gradient(120deg,#193e2b,#2b6143);box-shadow:0 18px 45px rgba(25,54,35,.14)}
+.dashboard-header:after{content:"";position:absolute;width:250px;height:250px;right:-70px;top:-110px;border:1px solid #ffffff20;border-radius:50%;box-shadow:0 0 0 30px #ffffff08,0 0 0 60px #ffffff05;pointer-events:none}
+.dashboard-header>*{position:relative;z-index:1}
+.dashboard-header h1,.dashboard-header h2{font-size:clamp(28px,4vw,40px)}
+.owner-card{padding:26px;border-radius:21px}
+.business-card-owner{border:1px solid var(--line);border-radius:20px;padding:23px;background:#fffefa;box-shadow:var(--shadow-soft)}
+.offer-box{border-radius:16px}
+.business-profile{box-shadow:var(--shadow);border-radius:30px}
+input,textarea,select{min-height:45px}
+textarea{min-height:110px}
+.update-button,.offer-action,#followButton,#rewardButton{box-shadow:0 8px 20px rgba(35,85,60,.15)}
+body:has(form) form{border:1px solid rgba(35,85,60,.08);border-radius:22px;background:rgba(255,254,250,.7);box-shadow:var(--shadow-soft)}
+@media(min-width:1100px){
+ .results-panel{padding-left:32px;padding-right:32px}
+ #businessList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+ .business-card{margin:0;min-height:130px}
+ #businessList>.loading-state,#businessList>p{grid-column:1/-1}
+}
+@media(max-width:900px){
+ main{width:min(100% - 30px,1240px)}
+ .hero{padding:44px 36px 78px;gap:12px}
+ .hero-bottom{left:36px;right:36px}
+ .hero h1{font-size:clamp(42px,6vw,61px)}
+ .discover-section{padding:58px 4px 0}
+}
+@media(max-width:700px){
+ main{width:calc(100% - 22px);padding-top:12px;padding-bottom:42px}
+ .top-bar{padding:10px 12px}
+ .hero{min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:30px 23px 73px;border-radius:24px}
+ .hero h1{font-size:clamp(43px,11vw,57px);letter-spacing:-2.9px;margin-top:19px}
+ .hero-copy>p{font-size:13px;line-height:1.75}
+ .hero-art{height:230px;margin-top:5px}
+ .orbit-one{width:245px;height:180px}.orbit-two{width:190px;height:250px}
+ .tile-main{width:153px;height:177px;padding:13px;border-radius:17px}
+ .tile-emoji{font-size:55px}.tile-label{font-size:8px;margin-top:10px}.tile-arrow{right:13px;bottom:11px}
+ .tile-small{padding:9px;border-radius:12px}.tile-small>span{font-size:20px}.tile-small small{font-size:8px}
+ .art-sun{width:52px;height:52px}.tile-top{left:2%;top:10%}.tile-bottom{right:2%;bottom:5%}
+ .hero-trust{font-size:9px;margin-top:20px}
+ .hero-bottom{left:23px;right:23px;gap:7px;min-height:53px;font-size:8px}
+ .hero-bottom b{display:block;margin:0 0 3px}
+ .hero-bottom-line{min-width:8px}
+ .discover-section{padding:43px 1px 0}
+ .discover-intro{align-items:flex-start;flex-direction:column;gap:16px;margin-bottom:20px}
+ .discover-intro h2{font-size:30px;letter-spacing:-1.2px}
+ .section-subtitle{font-size:12px}
+ .location-note{width:100%;padding:10px 12px}
+ .search-box{min-height:56px;border-radius:15px}
+ .search-box input{height:54px;padding-left:45px;padding-right:55px;font-size:12px}
+ .search-icon{left:15px}
+ .search-hint{right:12px;font-size:7px}
+ .filters{gap:7px;margin-bottom:20px}
+ .filter-btn{min-height:38px;padding:0 12px;font-size:10px;border-radius:11px}
+ .results-panel{padding:17px 13px 0;border-radius:20px}
+ .tabs{gap:4px;margin-bottom:22px;padding-bottom:12px}
+ .tabs button{flex:1;gap:5px;min-height:39px;padding:0 5px;font-size:10px}
+ .section-heading{align-items:flex-start;flex-direction:column;gap:9px}
+ .business-section h2{font-size:22px}
+ .business-card{gap:12px;padding:12px;border-radius:15px}
+ .business-icon{flex-basis:49px;width:49px;height:49px;border-radius:13px;font-size:22px}
+ .business-info h3,.business-card h3{font-size:14px;margin-top:1px}
+ .business-category{font-size:9px}
+ .business-address{font-size:10px;line-height:1.5}
+ .business-offer{font-size:10px;padding:7px 9px}
+ .results-footer{font-size:7px}
+ .closing-note{padding:15px;flex-wrap:wrap}
+ .closing-note p{font-size:10px}
+ .bottom-nav{bottom:8px}
+ .profile-page{padding:25px 12px 84px}
+ .profile-card{gap:12px;padding:15px}
+ .profile-card-content{min-width:0}
+ .profile-card-button{margin-left:64px}
+ .dashboard-header{padding:23px 18px;border-radius:21px}
+ .owner-card{padding:17px}
+ .business-card-owner{padding:16px}
+ main:has(.business-profile),main:has(.dashboard-header){width:calc(100% - 22px);padding-top:14px}
+ .business-profile{padding:22px 17px;border-radius:21px}
+ body:has(form) form{padding:15px}
+}
+@media(prefers-reduced-motion:reduce){.hero,.hero-art,.business-card,.profile-card{animation:none!important;transition:none!important}}
