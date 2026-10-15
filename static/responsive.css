@@ -1,0 +1,229 @@
+/* RetentionApp responsive layout hardening — loaded after page-specific styles */
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+*, *::before, *::after { box-sizing: border-box; }
+img, svg, video, canvas, iframe { max-width: 100%; }
+main, section, article, header, footer, nav, form, aside,
+.auth-shell, .auth-story, .auth-panel, .auth-form-wrap,
+.hero, .hero-copy, .hero-art, .discover-section, .results-panel,
+.profile-page, .business-profile, .dashboard-header, .owner-card,
+.business-card-owner, .offer-card, .profile-card {
+  min-width: 0;
+  max-width: 100%;
+}
+input, select, textarea, button { max-width: 100%; }
+input, select, textarea { min-width: 0; }
+pre, code { max-width: 100%; overflow-wrap: anywhere; }
+#businessList, .business-info, .profile-card-content { min-width: 0; }
+.business-card h3, .business-card p, .profile-card-content p,
+.auth-subtitle, .auth-message, .auth-switch, .auth-legal {
+  overflow-wrap: anywhere;
+}
+
+/* Tablet and phone: remove two-column layouts and allow controls to wrap */
+@media (max-width: 767px) {
+  .top-bar {
+    width: 100%;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
+  }
+  .brand { min-width: 0; flex: 0 1 auto; }
+  .header-actions {
+    min-width: 0;
+    max-width: 100%;
+    margin-left: auto;
+    gap: 6px !important;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .header-note { display: none !important; }
+  .header-auth-link, .header-owner-link {
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 9px !important;
+    white-space: normal;
+    text-align: center;
+    font-size: 10px !important;
+  }
+  main {
+    width: calc(100% - 24px) !important;
+    max-width: 100% !important;
+    padding: 16px 0 88px !important;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+    min-height: 0 !important;
+    gap: 12px !important;
+    padding: 28px 18px 72px !important;
+  }
+  .hero-copy, .hero-copy > p { width: 100%; max-width: 100% !important; }
+  .hero h1 {
+    max-width: 100%;
+    font-size: clamp(32px, 8.5vw, 50px) !important;
+    line-height: 1.05 !important;
+    letter-spacing: -.055em !important;
+    overflow-wrap: anywhere;
+  }
+  .hero-art {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100%;
+    height: 185px !important;
+    margin: 0 auto !important;
+    overflow: hidden;
+    transform: none !important;
+  }
+  .art-orbit { max-width: 100%; }
+  .hero-bottom {
+    left: 14px !important;
+    right: 14px !important;
+    gap: 5px !important;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .hero-bottom > span:not(.hero-bottom-line) {
+    min-width: 0;
+    flex: 1 1 26%;
+    line-height: 1.4;
+  }
+  .discover-section { padding: 34px 0 0 !important; }
+  .discover-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 14px;
+  }
+  .discover-intro h2 { font-size: clamp(24px, 6.5vw, 31px) !important; }
+  .location-note, .search-box, .results-panel { width: 100%; max-width: 100%; }
+  .search-box input { width: 100%; min-width: 0; font-size: 16px !important; }
+  .filters {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+  .filter-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px !important;
+    white-space: normal;
+    justify-content: center;
+  }
+  .results-panel { padding: 14px 10px 0 !important; }
+  .tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px !important;
+  }
+  .tabs button {
+    min-width: 0;
+    padding: 7px 3px !important;
+    white-space: normal;
+    font-size: 10px !important;
+  }
+  #businessList {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px;
+  }
+  .business-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 10px !important;
+    padding: 12px !important;
+    flex-wrap: nowrap;
+  }
+  .business-icon { flex: 0 0 42px !important; width: 42px !important; height: 42px !important; }
+  .business-info { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+  .business-card h3, .business-card p { white-space: normal !important; }
+  .section-heading { display: flex; flex-direction: column; align-items: flex-start !important; gap: 8px; }
+  .results-footer { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; line-height: 1.5; }
+  .closing-note { display: flex; flex-wrap: wrap; gap: 10px; }
+  .profile-page, .business-profile, .welcome, .dashboard-header,
+  .owner-card, .offer-card, .business-card-owner, .empty-state {
+    width: 100%;
+    max-width: 100%;
+    padding: clamp(14px, 4vw, 23px) !important;
+  }
+  .profile-card {
+    display: grid !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+  .profile-card-content { width: 100%; }
+  .profile-card-button { grid-column: 2; justify-self: start; margin: 0 !important; }
+  .auth-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    min-height: 100dvh;
+    padding: 12px !important;
+    gap: 12px !important;
+    margin: 0 auto;
+  }
+  .auth-story {
+    width: 100%;
+    min-width: 0;
+    min-height: auto !important;
+    max-height: none !important;
+    padding: 22px 18px !important;
+  }
+  .auth-story-copy { max-width: 100% !important; min-width: 0; }
+  .auth-story h1 { font-size: clamp(30px, 8vw, 42px) !important; line-height: 1.08 !important; }
+  .auth-panel { width: 100%; min-width: 0; padding: 22px 16px !important; }
+  .auth-form-wrap { width: 100% !important; max-width: 100% !important; }
+  .auth-field, .auth-password, .auth-field input { width: 100%; min-width: 0; }
+  .auth-field input { font-size: 16px !important; }
+  .auth-role-links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .auth-role-links a { flex: 1 1 100px; text-align: center; }
+  .bottom-nav {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    max-width: calc(100% - 20px);
+    justify-content: space-around;
+    gap: 3px !important;
+  }
+  .bottom-nav button { min-width: 0; flex: 1 1 0; padding: 0 7px; }
+}
+
+@media (max-width: 380px) {
+  main { width: calc(100% - 16px) !important; }
+  .top-bar { padding-inline: 8px !important; }
+  .header-actions { gap: 4px !important; }
+  .header-auth-link, .header-owner-link { padding-inline: 5px !important; font-size: 9px !important; }
+  .hero { padding-inline: 13px !important; }
+  .hero h1 { font-size: clamp(29px, 8.5vw, 36px) !important; }
+  .hero-bottom { left: 11px !important; right: 11px !important; font-size: 6px !important; }
+  .results-panel { padding-inline: 7px !important; }
+  .auth-shell { padding: 8px !important; }
+  .auth-story, .auth-panel { padding: 18px 13px !important; border-radius: 18px !important; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 900px) {
+  .auth-shell { min-height: 0; grid-template-columns: minmax(0, 1fr) !important; }
+  .auth-story { min-height: 0 !important; }
+  .hero { grid-template-columns: minmax(0, 1fr) !important; }
+  .hero-art { height: 130px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
