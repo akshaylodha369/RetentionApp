@@ -685,3 +685,61 @@ body.ra-motion-ready .ra-reveal.ra-visible{opacity:1;transform:translate3d(0,0,0
  @view-transition{navigation:none}
  body{animation:none!important}
 }
+
+
+/* ===== Mobile viewport fit fix (homepage + shared small-screen components) ===== */
+@media (max-width: 480px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+  .top-bar { width: 100%; min-width: 0; padding: 10px 11px !important; gap: 7px !important; }
+  .brand { gap: 7px; flex: 0 1 auto; min-width: 0; }
+  .brand-mark { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 11px; font-size: 22px; }
+  .brand-text { min-width: 0; }
+  .brand-text strong { font-size: 14px !important; letter-spacing: -.5px; }
+  .brand-text small { display: none; }
+  .header-actions { flex: 0 0 auto; min-width: 0; gap: 5px !important; }
+  .header-auth-link, .header-owner-link { min-height: 34px !important; padding: 0 7px !important; border-radius: 10px; font-size: 9px !important; white-space: nowrap; }
+  .profile { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 11px; }
+  main { width: calc(100% - 20px) !important; max-width: 100%; min-width: 0; padding-top: 12px !important; }
+  .hero { width: 100%; min-width: 0; padding: 29px 18px 66px !important; border-radius: 21px !important; }
+  .hero-badge { max-width: 100%; font-size: 8px; letter-spacing: 1px; }
+  .hero h1 { font-size: clamp(37px, 10.8vw, 49px) !important; letter-spacing: -.065em !important; overflow-wrap: anywhere; }
+  .hero-copy, .hero-copy > p { min-width: 0; max-width: 100%; }
+  .hero-art { width: 100%; max-width: 100%; height: 215px !important; overflow: hidden; }
+  .art-orbit { max-width: 100%; }
+  .tile-top { left: 0 !important; }
+  .tile-bottom { right: 0 !important; }
+  .hero-bottom { left: 18px !important; right: 18px !important; gap: 5px !important; font-size: 7px !important; }
+  .hero-bottom > span:not(.hero-bottom-line) { min-width: 0; line-height: 1.35; }
+  .hero-bottom-line { min-width: 4px !important; }
+  .discover-section { min-width: 0; padding-left: 0 !important; padding-right: 0 !important; }
+  .discover-intro, .search-box, .filters, .results-panel { min-width: 0; max-width: 100%; }
+  .discover-intro h2 { font-size: clamp(24px, 7vw, 29px) !important; overflow-wrap: anywhere; }
+  .filters { gap: 6px !important; }
+  .filter-btn { min-width: 0; padding: 0 9px !important; font-size: 10px !important; }
+  .results-panel { padding-left: 10px !important; padding-right: 10px !important; }
+  .tabs button { min-width: 0; gap: 4px !important; padding-left: 3px !important; padding-right: 3px !important; font-size: 9px !important; }
+  .section-heading { min-width: 0; }
+  .business-section h2, #sectionTitle { max-width: 100%; font-size: clamp(19px, 5.8vw, 23px) !important; overflow-wrap: anywhere; }
+  .business-card { min-width: 0; gap: 9px !important; padding: 11px !important; }
+  .business-icon { flex: 0 0 42px !important; width: 42px !important; height: 42px !important; }
+  .business-info { min-width: 0; overflow: hidden; }
+  .business-card h3, .business-card p { max-width: 100%; }
+  .results-footer { flex-wrap: wrap; row-gap: 8px; }
+  .closing-note { min-width: 0; flex-wrap: wrap; }
+  .closing-note p { min-width: 0; overflow-wrap: anywhere; }
+}
+@media (max-width: 360px) {
+  .top-bar { padding-left: 8px !important; padding-right: 8px !important; }
+  .brand-mark { flex-basis: 31px; width: 31px; height: 31px; }
+  .brand-text strong { font-size: 13px !important; }
+  .header-actions { gap: 4px !important; }
+  .header-auth-link, .header-owner-link { padding: 0 5px !important; font-size: 8px !important; }
+  .profile { flex-basis: 31px; width: 31px; height: 31px; }
+  main { width: calc(100% - 16px) !important; }
+  .hero { padding-left: 14px !important; padding-right: 14px !important; }
+  .hero h1 { font-size: clamp(34px, 10.5vw, 40px) !important; }
+  .hero-bottom { left: 14px !important; right: 14px !important; font-size: 6px !important; }
+  .hero-bottom b { margin-right: 2px !important; }
+  .filter-btn { padding: 0 7px !important; font-size: 9px !important; }
+  .results-panel { padding-left: 8px !important; padding-right: 8px !important; }
+}
