@@ -227,3 +227,152 @@ pre, code { max-width: 100%; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Mobile viewport fit v2 — final overrides for all app screens.
+   Keep desktop styling intact; only collapse rigid layouts on narrow screens. */
+html, body {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+body { overflow-x: hidden; }
+#businessList, .business-info, .profile-card-content, .auth-form-wrap,
+.auth-shell, .auth-story, .auth-panel, .page-content, main, section, article,
+.dashboard-header, .owner-card, .business-card-owner, .offer-card,
+.profile-card, .business-profile, .results-panel, .hero-copy, .hero-art {
+  min-width: 0 !important;
+  max-width: 100%;
+}
+img, video, canvas, iframe, table { max-width: 100%; }
+table { display: block; overflow-x: auto; }
+input, select, textarea, button { min-width: 0; }
+input, select, textarea { width: 100%; }
+button { overflow-wrap: anywhere; }
+
+@media screen and (max-width: 767px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden !important; }
+  .top-bar {
+    position: sticky;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    padding: 10px 12px !important;
+  }
+  .brand { flex: 1 1 130px; }
+  .header-actions {
+    flex: 1 1 auto;
+    margin-left: 0 !important;
+    justify-content: flex-end;
+    flex-wrap: wrap !important;
+  }
+  main, main:has(.business-profile), main:has(.dashboard-header) {
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+    padding-top: 14px !important;
+  }
+  .hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: auto !important;
+    padding: 26px 17px 68px !important;
+    gap: 12px !important;
+  }
+  .hero-copy, .hero-copy > p { width: 100% !important; max-width: 100% !important; }
+  .hero h1 {
+    max-width: 100% !important;
+    font-size: clamp(30px, 8vw, 44px) !important;
+    line-height: 1.06 !important;
+    letter-spacing: -.05em !important;
+    overflow-wrap: anywhere;
+  }
+  .hero-art { width: 100% !important; height: 175px !important; overflow: hidden; }
+  .hero-bottom { flex-wrap: wrap !important; }
+  .discover-section { padding: 32px 0 0 !important; }
+  .discover-intro { align-items: stretch !important; flex-direction: column !important; }
+  .filters { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .filter-btn { width: 100% !important; white-space: normal !important; }
+  .results-panel { width: 100% !important; padding: 13px 9px 0 !important; }
+  .tabs { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .tabs button { width: 100% !important; padding-inline: 3px !important; white-space: normal !important; }
+  #businessList {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .business-card {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+  .business-info { flex: 1 1 0 !important; width: 0; overflow-wrap: anywhere; }
+  .business-card h3, .business-card p { white-space: normal !important; overflow-wrap: anywhere; }
+  .section-heading { align-items: flex-start !important; flex-direction: column !important; }
+  .results-footer { flex-direction: column !important; align-items: flex-start !important; }
+  .auth-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    min-height: 100dvh !important;
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+  .auth-story { min-height: auto !important; max-height: none !important; padding: 21px 17px !important; }
+  .auth-story h1 { font-size: clamp(29px, 7.8vw, 39px) !important; letter-spacing: -.045em !important; overflow-wrap: anywhere; }
+  .auth-panel { padding: 20px 12px !important; }
+  .auth-form-wrap { width: 100% !important; max-width: 100% !important; }
+  .auth-field input { width: 100% !important; font-size: 16px !important; }
+  .auth-role-links { display: flex !important; flex-wrap: wrap !important; }
+  .auth-role-links a { flex: 1 1 100px; }
+  .profile-page, .business-profile, .dashboard-header, .owner-card,
+  .business-card-owner, .offer-card, .empty-state, .welcome {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: clamp(14px, 4vw, 22px) !important;
+  }
+  .profile-card {
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .profile-card-content { min-width: 0 !important; }
+  .profile-card-button { grid-column: 2 !important; justify-self: start !important; white-space: normal !important; }
+  .bottom-nav {
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  }
+  .bottom-nav button { min-width: 0 !important; flex: 1 1 0 !important; }
+  .closing-note { flex-wrap: wrap !important; }
+  .offer-box textarea { width: 100% !important; }
+}
+
+@media screen and (max-width: 360px) {
+  .top-bar { gap: 6px !important; padding-inline: 8px !important; }
+  .brand-mark { width: 34px !important; height: 34px !important; }
+  .header-actions { gap: 4px !important; }
+  .header-auth-link, .header-owner-link { padding-inline: 7px !important; font-size: 9px !important; }
+  main { width: calc(100% - 16px) !important; }
+  .hero { padding-inline: 13px !important; }
+  .hero-bottom { left: 12px !important; right: 12px !important; }
+  .auth-shell { padding: 7px !important; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 900px) {
+  .hero-art { height: 120px !important; }
+  .auth-shell { min-height: 0 !important; }
+}
