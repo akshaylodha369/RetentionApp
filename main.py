@@ -460,6 +460,12 @@ def signup(
             detail="Password must be at least 8 characters."
         )
 
+    if len(password) > 1024:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be 1024 characters or fewer."
+        )
+
     existing_customer = get_user_by_email_and_role(
         email,
         "customer"
@@ -540,6 +546,9 @@ def login(
             status_code=400,
             detail="Please enter a valid email address."
         )
+
+    if len(password) > 1024:
+        raise HTTPException(status_code=400, detail="Password must be 1024 characters or fewer.")
 
     user = get_user_by_email_and_role(
         email,
@@ -694,7 +703,6 @@ def business_detail(
         "longitude": row[4],
         "address": row[5],
         "offer": row[6],
-        "owner_id": row[7]
     }
 
 
@@ -1561,6 +1569,12 @@ def owner_signup(
             detail="Password must be at least 8 characters."
         )
 
+    if len(password) > 1024:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be 1024 characters or fewer."
+        )
+
     existing_owner = get_user_by_email_and_role(
         email,
         "owner"
@@ -1641,6 +1655,9 @@ def owner_login(
             status_code=400,
             detail="Please enter a valid email address."
         )
+
+    if len(password) > 1024:
+        raise HTTPException(status_code=400, detail="Password must be 1024 characters or fewer.")
 
     user = get_user_by_email_and_role(
         email,
