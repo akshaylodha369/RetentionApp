@@ -69,13 +69,25 @@
     const message = document.getElementById("profileMessage");
 
     try {
-        const response = await fetch("/api/me", {
+        const requestSession = () => fetch("/api/me", {
             method: "GET",
-            credentials: "same-origin",
+            credentials: "include",
+            cache: "no-store",
             headers: { "Accept": "application/json" }
         });
+
+        let response = await requestSession();
         if (!response.ok) throw new Error("Profile request failed.");
-        const data = await response.json();
+        let data = await response.json();
+
+        // Recheck once before redirecting. This avoids a one-off session read
+        // failure immediately ejecting a user from the profile page.
+        if (!data.logged_in) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            response = await requestSession();
+            if (!response.ok) throw new Error("Profile request failed.");
+            data = await response.json();
+        }
 
         if (!data.logged_in) {
             window.location.replace("/static/login.html?next=%2Fstatic%2Fprofile.html");

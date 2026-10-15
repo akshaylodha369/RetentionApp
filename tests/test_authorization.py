@@ -222,3 +222,31 @@ def test_session_database_stores_only_token_hashes(app_client):
     import hashlib
     assert token not in stored_hashes
     assert hashlib.sha256(token.encode("utf-8")).hexdigest() in stored_hashes
+
+
+
+def test_owner_login_persists_a_valid_server_session(app_client):
+    client = app_client["client"]
+    password = "safe-password-123"
+    password_hash = main.hash_password(password)
+    conn = database.get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            ("Owner Login Test", "owner-login-test@example.com", password_hash, "owner"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    response = client.post(
+        "/api/owner/login",
+        data={"email": "owner-login-test@example.com", "password": password},
+    )
+    assert response.status_code == 200
+    assert response.cookies.get(main.SESSION_COOKIE_NAME)
+    session = client.get("/api/me")
+    assert session.status_code == 200
+    assert session.json()["logged_in"] is True
+    assert session.json()["user"]["role"] == "owner"
