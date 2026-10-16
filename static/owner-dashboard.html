@@ -241,6 +241,7 @@
             <p>
                 Manage your business and update your offers.
             </p>
+            <p><a class="profile-card-button" href="/static/owner-loyalty.html">Open rewards &amp; analytics</a></p>
 
         </section>
 
@@ -519,10 +520,10 @@
         const message = document.getElementById("claimMessage");
         if (!select) return;
         try {
-            const response = await fetch("/api/businesses", { credentials: "same-origin" });
+            const response = await fetch("/api/owner/claimable-businesses", { credentials: "same-origin" });
             if (!response.ok) throw new Error("Could not load listings.");
             const businesses = await response.json();
-            const claimable = businesses.filter(b => b.owner_id === null || b.owner_id === undefined);
+            const claimable = businesses;
             select.innerHTML = '<option value="">Choose a business…</option>' +
                 claimable.map(b => '<option value="' + Number(b.id) + '">' +
                     escapeHtml(b.name) + ' — ' + escapeHtml(b.address || "Address unavailable") +

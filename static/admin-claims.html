@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Business Claim Review — RetentionApp</title>
+<link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/responsive.css">
+<style>
+.admin-wrap{max-width:1000px;margin:24px auto;padding:16px}.admin-warning{padding:16px;border:1px solid #e5b45b;background:#fff8e8;border-radius:14px}.admin-card{background:#fff;border:1px solid #dfe5dc;border-radius:14px;padding:16px;margin:12px 0;overflow-wrap:anywhere}.admin-form input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #cbd5ce;border-radius:10px;font:inherit}.admin-form button,.admin-card button{border:0;border-radius:999px;padding:10px 14px;margin:8px 8px 0 0;font-weight:700;cursor:pointer}.admin-primary{background:#245b4e;color:#fff}.admin-danger{background:#9c2f2f;color:#fff}.admin-status{min-height:24px}
+</style>
+</head>
+<body>
+<header class="top-bar"><a class="brand" href="/" aria-label="RetentionApp home"><span class="brand-mark">r.</span><span class="brand-text"><strong>retention<span>app</span></strong><small>Internal claim review</small></span></a><a href="/" class="header-auth-link">Public site</a></header>
+<main class="admin-wrap">
+<h1>Business ownership claims</h1>
+<div class="admin-warning"><strong>Restricted admin tool.</strong> Open only on a trusted device. Enter the server-side <code>BUSINESS_MIGRATION_SECRET</code> manually; this page does not save it. Approve a claim only after independently verifying ownership.</div>
+<form id="secretForm" class="admin-form admin-card">
+<label for="adminSecret">Admin secret</label><input id="adminSecret" type="password" autocomplete="current-password" required>
+<button class="admin-primary" type="submit">Load pending claims</button>
+</form>
+<p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
+<section id="claims"></section>
+</main>
+<script>
+(function(){
+ const form=document.getElementById("secretForm"),secretInput=document.getElementById("adminSecret"),status=document.getElementById("adminStatus"),root=document.getElementById("claims");
+ let secret="";
+ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ async function api(url,options={}){const response=await fetch(url,{cache:"no-store",...options,headers:{"X-Migration-Secret":secret,...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||"Request failed ("+response.status+")");return data;}
+ async function load(){status.textContent="Loading pending claims…";try{const claims=await api("/api/admin/business-claims");root.innerHTML=claims.length?claims.map(c=>'<article class="admin-card"><h2>'+esc(c.business_name)+'</h2><p><strong>Address:</strong> '+esc(c.business_address)+'</p><p><strong>Claimant:</strong> '+esc(c.owner_name)+' ('+esc(c.owner_email)+')</p><p><strong>Verification note:</strong> '+esc(c.verification_note||"No note supplied")+'</p><p><strong>Submitted:</strong> '+new Date(Number(c.created_at)*1000).toLocaleString()+'</p><button class="admin-primary" type="button" data-review="'+Number(c.claim_id)+'" data-status="approved">Approve after verification</button><button class="admin-danger" type="button" data-review="'+Number(c.claim_id)+'" data-status="rejected">Reject</button></article>').join(""):'<article class="admin-card">No pending claims.</article>';status.textContent=claims.length+" pending claim(s).";}catch(error){root.innerHTML="";status.textContent=error.message;}}
+ form.addEventListener("submit",async event=>{event.preventDefault();secret=secretInput.value;await load();});
+ root.addEventListener("click",async event=>{const button=event.target.closest("[data-review]");if(!button)return;const decision=button.dataset.status;if(!confirm((decision==="approved"?"Approve":"Reject")+" this ownership claim?"))return;button.disabled=true;try{await api("/api/admin/business-claims/"+encodeURIComponent(button.dataset.review)+"/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:decision})});status.textContent="Claim "+decision+".";await load();}catch(error){status.textContent=error.message;button.disabled=false;}});
+})();
+</script>
+</body></html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f2"><title>Loyalty tools — RetentionApp</title>
+  <link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/responsive.css">
+  <style>
+    .owner-loyalty{max-width:1050px;margin:28px auto;padding:18px}.owner-hero{padding:24px;border-radius:20px;background:#183b35;color:#fff}
+    .owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px;margin:18px 0}
+    .owner-card{background:white;border:1px solid #dfe5dc;border-radius:16px;padding:18px;min-width:0}
+    .owner-card label{display:block;font-weight:650;margin:12px 0 5px}.owner-card input,.owner-card select,.owner-card textarea{width:100%;padding:11px;border:1px solid #cbd5ce;border-radius:10px;font:inherit}
+    .owner-card textarea{min-height:76px;resize:vertical}.owner-card button{margin-top:14px;border:0;border-radius:999px;padding:11px 16px;background:#245b4e;color:#fff;font-weight:700;cursor:pointer}
+    .owner-status{min-height:24px}.owner-metric{font-size:1.7rem;font-weight:800}.owner-muted{color:#5d6b65}.owner-qr{display:block;width:min(100%,190px);height:auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px;margin:12px 0}
+    @media(max-width:600px){.owner-loyalty{padding:12px;margin:12px auto}.owner-hero{padding:18px}}
+  </style>
+</head>
+<body>
+<header class="top-bar"><a class="brand" href="/" aria-label="RetentionApp home"><span class="brand-mark">r.</span><span class="brand-text"><strong>retention<span>app</span></strong><small>Your neighbourhood, closer.</small></span></a><a href="/static/owner-dashboard.html" class="header-auth-link">Dashboard</a></header>
+<main class="owner-loyalty">
+  <section class="owner-hero"><p class="section-eyebrow">CUSTOMER RETENTION</p><h1>Rewards & insights</h1><p>Create loyalty rewards, record points for following customers, and manage redemptions.</p></section>
+  <p id="ownerStatus" class="owner-status" role="status" aria-live="polite">Checking owner session…</p>
+  <section><h2>Business performance</h2><div id="analytics" class="owner-grid"></div></section>
+  <section class="owner-grid">
+    <form id="rewardForm" class="owner-card">
+      <h2>Create a reward</h2><label for="rewardBusiness">Business</label><select id="rewardBusiness" required></select>
+      <label for="rewardTitle">Reward name</label><input id="rewardTitle" maxlength="100" required placeholder="Free coffee">
+      <label for="rewardDescription">Description</label><textarea id="rewardDescription" maxlength="500" placeholder="What the customer receives"></textarea>
+      <label for="rewardCost">Points required</label><input id="rewardCost" type="number" min="1" max="100000" required value="50">
+      <button type="submit">Create reward</button>
+    </form>
+    <form id="pointsForm" class="owner-card">
+      <h2>Award customer points</h2><p class="owner-muted">Only award points after confirming a real purchase/visit. Customer must follow this business.</p>
+      <label for="pointsBusiness">Business</label><select id="pointsBusiness" required></select>
+      <label for="customerEmail">Customer email</label><input id="customerEmail" type="email" maxlength="254" required placeholder="customer@example.com">
+      <label for="pointsAmount">Points (max 500 per award)</label><input id="pointsAmount" type="number" min="1" max="500" required value="10">
+      <label for="pointsReason">Reason / receipt reference</label><input id="pointsReason" maxlength="200" required placeholder="Purchase receipt #123">
+      <button type="submit">Award points</button>
+    </form>
+  </section>
+  <section>
+    <h2>Manage rewards</h2>
+    <div id="ownerRewards" class="owner-grid"></div>
+  </section>
+  <section>
+    <h2>Following customers</h2>
+    <div class="owner-card"><label for="customerBusiness">Business</label><select id="customerBusiness"></select><p class="owner-muted">Only customers following your selected business appear here.</p></div>
+    <div id="customers" class="owner-grid"></div>
+  </section>
+  <section><h2>Reward redemptions</h2><div id="redemptions" class="owner-grid"></div></section>
+</main>
+<script>
+(async function(){
+ const status=document.getElementById("ownerStatus");
+ const businessSelects=[document.getElementById("rewardBusiness"),document.getElementById("pointsBusiness")];
+ const analyticsRoot=document.getElementById("analytics"),redemptionsRoot=document.getElementById("redemptions"),customersRoot=document.getElementById("customers"),customerBusiness=document.getElementById("customerBusiness"),ownerRewardsRoot=document.getElementById("ownerRewards");
+ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const api=async(url,options={})=>{const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||"Request failed ("+response.status+")");return data;};
+ try{
+   const me=await api("/api/me");
+   if(!me.logged_in){location.replace("/static/owner-login.html");return;}
+   if(me.user?.role!=="owner"){status.textContent="This page is only for business owner accounts.";return;}
+   const businesses=await api("/api/owner/businesses");
+   if(!businesses.length){status.textContent="No business is assigned to this account yet. Submit a claim request from the owner dashboard.";businessSelects.forEach(s=>s.innerHTML='<option value="">No assigned businesses</option>');}
+   else { businessSelects.forEach(select=>select.innerHTML=businesses.map(b=>'<option value="'+Number(b.id)+'">'+esc(b.name)+'</option>').join("")); customerBusiness.innerHTML=businesses.map(b=>'<option value="'+Number(b.id)+'">'+esc(b.name)+'</option>').join(""); }
+   const [analytics,redemptions,rewards]=await Promise.all([api("/api/owner/analytics"),api("/api/owner/redemptions"),api("/api/owner/rewards")]);
+   analyticsRoot.innerHTML=analytics.businesses.length?analytics.businesses.map(b=>'<article class="owner-card"><h3>'+esc(b.business_name)+'</h3><img class="owner-qr" loading="lazy" alt="QR code for '+esc(b.business_name)+'" src="/api/owner/businesses/'+Number(b.business_id)+'/qr.svg"><a href="/api/owner/businesses/'+Number(b.business_id)+'/qr.svg" download="retentionapp-business-'+Number(b.business_id)+'.svg">Download business QR</a><p>Followers</p><p class="owner-metric">'+Number(b.followers)+'</p><p>Active rewards: <strong>'+Number(b.active_rewards)+'</strong></p><p>Customers rewarded: <strong>'+Number(b.customers_rewarded)+'</strong></p><p>Repeat customers: <strong>'+Number(b.repeat_customers)+'</strong></p><p>Pending redemptions: <strong>'+Number(b.pending_redemptions)+'</strong></p><p>Points issued: <strong>'+Number(b.points_issued)+'</strong> · spent: <strong>'+Number(b.points_spent)+'</strong></p></article>').join(""):'<article class="owner-card">No assigned businesses yet.</article>';
+   ownerRewardsRoot.innerHTML=rewards.length?rewards.map(r=>'<article class="owner-card"><p class="owner-muted">'+esc(r.business_name)+'</p><h3>'+esc(r.title)+'</h3><p>'+esc(r.description||"")+'</p><p>Cost: <strong>'+Number(r.points_cost)+' points</strong> · '+(r.active?"Active":"Inactive")+'</p>'+(r.active?'<button type="button" data-deactivate-reward="'+Number(r.id)+'">Deactivate reward</button>':'')+'</article>').join(""):'<article class="owner-card">No rewards yet. Create your first reward above.</article>';
+   ownerRewardsRoot.addEventListener("click",async event=>{const button=event.target.closest("[data-deactivate-reward]");if(!button)return;if(!confirm("Deactivate this reward? Customers will no longer be able to redeem it."))return;button.disabled=true;try{await api("/api/owner/rewards/"+encodeURIComponent(button.dataset.deactivateReward)+"/deactivate",{method:"POST"});status.textContent="Reward deactivated.";location.reload();}catch(error){status.textContent=error.message;button.disabled=false;}});
+   redemptionsRoot.innerHTML=redemptions.length?redemptions.map(r=>'<article class="owner-card"><p class="owner-muted">'+esc(r.business_name)+'</p><h3>'+esc(r.reward_title)+'</h3><p>Customer: '+esc(r.customer_name)+' · '+Number(r.points_spent)+' points</p><p>Status: <strong>'+esc(r.status)+'</strong></p>'+(r.status==="pending"?'<button data-fulfill="'+Number(r.id)+'">Mark fulfilled</button>':'')+'</article>').join(""):'<article class="owner-card">No reward redemptions yet.</article>';
+   redemptionsRoot.addEventListener("click",async event=>{const button=event.target.closest("[data-fulfill]");if(!button)return;button.disabled=true;try{await api("/api/owner/redemptions/"+encodeURIComponent(button.dataset.fulfill)+"/fulfill",{method:"POST"});status.textContent="Redemption marked fulfilled.";location.reload();}catch(error){status.textContent=error.message;button.disabled=false;}});
+   document.getElementById("rewardForm").addEventListener("submit",async event=>{event.preventDefault();const form=event.currentTarget;const businessId=document.getElementById("rewardBusiness").value;const body=new URLSearchParams({title:document.getElementById("rewardTitle").value,description:document.getElementById("rewardDescription").value,points_cost:document.getElementById("rewardCost").value});try{await api("/api/owner/businesses/"+encodeURIComponent(businessId)+"/rewards",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});status.textContent="Reward created.";form.reset();location.reload();}catch(error){status.textContent=error.message;}});
+   document.getElementById("pointsForm").addEventListener("submit",async event=>{event.preventDefault();const businessId=document.getElementById("pointsBusiness").value;const body=new URLSearchParams({customer_email:document.getElementById("customerEmail").value,points:document.getElementById("pointsAmount").value,reason:document.getElementById("pointsReason").value});try{await api("/api/owner/businesses/"+encodeURIComponent(businessId)+"/points",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});status.textContent="Points awarded successfully.";event.currentTarget.reset();}catch(error){status.textContent=error.message;}});
+   async function loadCustomers(){
+     if(!customerBusiness.value){customersRoot.innerHTML='<article class="owner-card">No business selected.</article>';return;}
+     try{
+       const customers=await api("/api/owner/businesses/"+encodeURIComponent(customerBusiness.value)+"/customers");
+       customersRoot.innerHTML=customers.length?customers.map(c=>'<article class="owner-card"><h3>'+esc(c.name)+'</h3><p>'+esc(c.email)+'</p><p>Points balance: <strong>'+Number(c.points)+'</strong></p><button type="button" data-award-email="'+esc(c.email)+'" data-award-business="'+Number(customerBusiness.value)+'">Award points</button></article>').join(""):'<article class="owner-card">No customers follow this business yet.</article>';
+     }catch(error){customersRoot.innerHTML='<article class="owner-card">'+esc(error.message)+'</article>';}
+   }
+   customerBusiness.addEventListener("change",loadCustomers);
+   customersRoot.addEventListener("click",event=>{const button=event.target.closest("[data-award-email]");if(!button)return;document.getElementById("customerEmail").value=button.dataset.awardEmail;document.getElementById("pointsBusiness").value=button.dataset.awardBusiness;document.getElementById("pointsReason").focus();document.getElementById("pointsReason").scrollIntoView({behavior:"smooth",block:"center"});});
+   await loadCustomers();
+   status.textContent="Owner tools loaded.";
+ }catch(error){status.textContent=error.message||"Could not load owner tools.";}
+})();
+</script>
+</body></html>

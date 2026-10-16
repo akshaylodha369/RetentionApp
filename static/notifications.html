@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f7f2">
+<title>Notifications — RetentionApp</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/responsive.css">
+<style>
+.notice-wrap{max-width:850px;margin:28px auto;padding:18px}.notice-hero{background:#183b35;color:#fff;border-radius:20px;padding:22px}.notice-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0}.notice-list{display:grid;gap:12px}.notice-card{background:#fff;border:1px solid #dfe5dc;border-radius:16px;padding:16px}.notice-card.unread{border-left:5px solid #245b4e}.notice-card h2{font-size:1.1rem;margin:0 0 8px}.notice-muted{color:#5d6b65;font-size:.9rem}.notice-button{border:0;border-radius:999px;padding:10px 14px;background:#245b4e;color:#fff;font-weight:700;cursor:pointer}.notice-link{display:inline-block;margin-top:10px}.notice-status{min-height:24px}
+@media(max-width:600px){.notice-wrap{padding:12px;margin:12px auto}.notice-hero{padding:18px}}
+</style>
+</head>
+<body>
+<header class="top-bar"><a class="brand" href="/" aria-label="RetentionApp home"><span class="brand-mark">r.</span><span class="brand-text"><strong>retention<span>app</span></strong><small>Your neighbourhood, closer.</small></span></a><a href="/static/profile.html" class="header-auth-link">Profile</a></header>
+<main class="notice-wrap">
+<section class="notice-hero"><p class="section-eyebrow">STAY IN THE LOOP</p><h1>Notifications</h1><p>New offers and updates from businesses you follow.</p></section>
+<div class="notice-toolbar"><p id="noticeStatus" class="notice-status" role="status" aria-live="polite">Loading notifications…</p><button id="readAll" class="notice-button" type="button">Mark all as read</button></div>
+<section id="noticeList" class="notice-list"></section>
+</main>
+<script>
+(async function(){
+ const status=document.getElementById("noticeStatus"),root=document.getElementById("noticeList"),readAll=document.getElementById("readAll");
+ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const api=async(url,options={})=>{const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||"Request failed");return data;};
+ async function load(){
+  try{
+   const me=await api("/api/me");if(!me.logged_in){location.replace("/static/login.html?next=%2Fstatic%2Fnotifications.html");return;}
+   const items=await api("/api/notifications");
+   root.innerHTML=items.length?items.map(item=>{const safeLink=typeof item.link==="string"&&item.link.startsWith("/")&&!item.link.startsWith("//")?item.link:"/";return '<article class="notice-card '+(item.read?"":"unread")+'"><h2>'+esc(item.title)+'</h2><p>'+esc(item.message)+'</p><p class="notice-muted">'+new Date(Number(item.created_at)*1000).toLocaleString()+' · '+(item.read?"Read":"Unread")+'</p><a class="notice-link" href="'+esc(safeLink)+'">Open update</a>'+(item.read?"":' <button class="notice-button" type="button" data-read="'+Number(item.id)+'">Mark as read</button>')+'</article>';}).join(""):'<article class="notice-card"><h2>You’re all caught up</h2><p>When businesses you follow publish new offers, they’ll appear here.</p><a href="/">Explore businesses</a></article>';
+   status.textContent=items.filter(item=>!item.read).length+" unread notification(s).";
+  }catch(error){status.textContent=error.message||"Could not load notifications.";}
+ }
+ root.addEventListener("click",async event=>{const button=event.target.closest("[data-read]");if(!button)return;button.disabled=true;try{await api("/api/notifications/"+encodeURIComponent(button.dataset.read)+"/read",{method:"POST"});await load();}catch(error){status.textContent=error.message;button.disabled=false;}});
+ readAll.addEventListener("click",async()=>{readAll.disabled=true;try{await api("/api/notifications/read-all",{method:"POST"});await load();}catch(error){status.textContent=error.message;}finally{readAll.disabled=false;}});
+ await load();
+})();
+</script>
+</body></html>

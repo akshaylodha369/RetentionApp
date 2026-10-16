@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f2">
+  <title>Rewards — RetentionApp</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/responsive.css">
+  <style>
+    .loyalty-wrap{max-width:980px;margin:32px auto;padding:20px}
+    .loyalty-hero{padding:24px;border-radius:20px;background:#183b35;color:#fff}
+    .loyalty-hero h1{margin:4px 0 8px;font-size:clamp(1.8rem,5vw,2.7rem)}
+    .loyalty-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;margin-top:18px}
+    .loyalty-card{padding:18px;border:1px solid #dfe5dc;border-radius:16px;background:#fff}
+    .loyalty-card h3{margin:0 0 8px}.loyalty-muted{color:#5d6b65;font-size:.95rem}
+    .loyalty-points{font-size:1.6rem;font-weight:800;margin:8px 0}
+    .loyalty-button{border:0;border-radius:999px;padding:11px 16px;background:#245b4e;color:white;font-weight:700;cursor:pointer}
+    .loyalty-button:disabled{opacity:.5;cursor:not-allowed}
+    .loyalty-status{min-height:24px;margin:12px 0}
+    .loyalty-top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+    @media(max-width:600px){.loyalty-wrap{padding:14px;margin:14px auto}.loyalty-hero{padding:18px}}
+  </style>
+</head>
+<body>
+<header class="top-bar">
+  <a class="brand" href="/" aria-label="RetentionApp home"><span class="brand-mark">r.</span><span class="brand-text"><strong>retention<span>app</span></strong><small>Your neighbourhood, closer.</small></span></a>
+  <a href="/static/profile.html" class="header-auth-link">Profile</a>
+</header>
+<main class="loyalty-wrap">
+  <section class="loyalty-hero">
+    <p class="section-eyebrow">YOUR LOCAL PERKS</p>
+    <h1>Points that bring you back.</h1>
+    <p>Earn points from businesses you follow and redeem rewards when you have enough points.</p>
+  </section>
+  <p id="loyaltyStatus" class="loyalty-status" role="status" aria-live="polite">Loading your rewards…</p>
+  <section>
+    <div class="loyalty-top"><h2>Your points</h2><a href="/">Explore businesses</a></div>
+    <div id="balances" class="loyalty-grid"></div>
+  </section>
+  <section>
+    <h2>Rewards from businesses you follow</h2>
+    <div id="rewards" class="loyalty-grid"></div>
+  </section>
+  <section>
+    <h2>Redemption history</h2>
+    <div id="redemptionHistory" class="loyalty-grid"></div>
+  </section>
+  <section>
+    <h2>Recent points activity</h2>
+    <div id="activity" class="loyalty-grid"></div>
+  </section>
+</main>
+<script>
+(async function(){
+  const status=document.getElementById("loyaltyStatus");
+  const balances=document.getElementById("balances");
+  const rewardsRoot=document.getElementById("rewards");
+  const activity=document.getElementById("activity");
+  const redemptionHistory=document.getElementById("redemptionHistory");
+  const esc=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  try{
+    const me=await fetch("/api/me",{credentials:"same-origin",cache:"no-store"});
+    const meData=await me.json();
+    if(!meData.logged_in){location.replace("/static/login.html?next=%2Fstatic%2Floyalty.html");return;}
+    if(meData.user?.role!=="customer"){status.textContent="Please use a customer account to redeem rewards.";return;}
+    const [summaryResponse,followingResponse,redemptionsResponse]=await Promise.all([
+      fetch("/api/loyalty/summary",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/following",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/loyalty/redemptions",{credentials:"same-origin",cache:"no-store"})
+    ]);
+    if(!summaryResponse.ok||!followingResponse.ok||!redemptionsResponse.ok)throw new Error("Could not load rewards.");
+    const summary=await summaryResponse.json();
+    const following=await followingResponse.json();
+    const redemptionItems=await redemptionsResponse.json();
+    const balanceMap=new Map(summary.balances.map(item=>[Number(item.business_id),Number(item.points)]));
+    if(!summary.balances.length)balances.innerHTML='<div class="loyalty-card"><p class="loyalty-muted">You have not earned points yet. Follow a business and ask the owner about its loyalty programme.</p></div>';
+    else balances.innerHTML=summary.balances.map(item=>{const business=following.find(b=>Number(b.id)===Number(item.business_id));return '<article class="loyalty-card"><h3>'+esc(business?.name||("Business #"+item.business_id))+'</h3><p class="loyalty-points">'+Number(item.points)+' points</p></article>';}).join("");
+    const rewardGroups=await Promise.all(following.map(async business=>{
+      const response=await fetch("/api/businesses/"+encodeURIComponent(business.id)+"/rewards");
+      if(!response.ok)return [];
+      return (await response.json()).map(reward=>({...reward,business_name:business.name,balance:balanceMap.get(Number(business.id))||0}));
+    }));
+    const allRewards=rewardGroups.flat();
+    rewardsRoot.innerHTML=allRewards.length?allRewards.map(reward=>'<article class="loyalty-card"><p class="loyalty-muted">'+esc(reward.business_name)+'</p><h3>'+esc(reward.title)+'</h3><p>'+esc(reward.description||"")+'</p><p><strong>'+Number(reward.points_cost)+' points</strong> · You have '+Number(reward.balance)+'</p><button class="loyalty-button" data-redeem="'+Number(reward.id)+'" '+(reward.balance<reward.points_cost?'disabled':'')+'>Redeem reward</button></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">No rewards available yet from the businesses you follow.</p></div>';
+    redemptionHistory.innerHTML=redemptionItems.length?redemptionItems.map(item=>'<article class="loyalty-card"><p class="loyalty-muted">'+esc(item.business_name)+'</p><h3>'+esc(item.reward_title)+'</h3><p>'+Number(item.points_spent)+' points · Status: <strong>'+esc(item.status)+'</strong></p><p class="loyalty-muted">'+new Date(Number(item.created_at)*1000).toLocaleString()+'</p></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">Your redeemed rewards will appear here.</p></div>';
+    activity.innerHTML=summary.recent_transactions.length?summary.recent_transactions.map(item=>'<article class="loyalty-card"><h3>'+esc(item.business_name)+'</h3><p>'+esc(item.reason)+'</p><p class="loyalty-points">'+(Number(item.points_delta)>0?"+":"")+Number(item.points_delta)+' points</p><p class="loyalty-muted">'+new Date(Number(item.created_at)*1000).toLocaleString()+'</p></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">Your points history will appear here.</p></div>';
+    rewardsRoot.addEventListener("click",async event=>{
+      const button=event.target.closest("[data-redeem]");
+      if(!button)return;
+      button.disabled=true;button.textContent="Redeeming…";
+      try{
+        const response=await fetch("/api/rewards/"+encodeURIComponent(button.dataset.redeem)+"/redeem",{method:"POST",credentials:"same-origin"});
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.detail||"Could not redeem reward.");
+        status.textContent="Reward redeemed! Show the pending redemption to the business owner.";
+        location.reload();
+      }catch(error){status.textContent=error.message;button.disabled=false;button.textContent="Redeem reward";}
+    });
+    status.textContent="Your points and available rewards are up to date.";
+  }catch(error){status.textContent=error.message||"Could not load your rewards. Refresh and try again.";}
+})();
+</script>
+</body>
+</html>
