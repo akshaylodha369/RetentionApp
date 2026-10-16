@@ -18,6 +18,28 @@ const homeNav = document.getElementById("homeNav");
 const profileNav = document.getElementById("profileNav");
 
 
+// Render calm skeleton cards while business lists are loading.
+function showLoadingCards(label) {
+    const safeLabel = escapeHtml(label || "Loading businesses…");
+    businessList.innerHTML = `
+        <div class="ra-loading-state" role="status" aria-live="polite">
+            <p class="ra-loading-label">${safeLabel}</p>
+            <div class="ra-skeleton-card" aria-hidden="true">
+                <span class="ra-skeleton-icon"></span>
+                <span class="ra-skeleton-lines"><span class="ra-skeleton-line is-title"></span><span class="ra-skeleton-line"></span><span class="ra-skeleton-line is-short"></span></span>
+            </div>
+            <div class="ra-skeleton-card" aria-hidden="true">
+                <span class="ra-skeleton-icon"></span>
+                <span class="ra-skeleton-lines"><span class="ra-skeleton-line is-title"></span><span class="ra-skeleton-line"></span><span class="ra-skeleton-line is-short"></span></span>
+            </div>
+            <div class="ra-skeleton-card" aria-hidden="true">
+                <span class="ra-skeleton-icon"></span>
+                <span class="ra-skeleton-lines"><span class="ra-skeleton-line is-title"></span><span class="ra-skeleton-line"></span><span class="ra-skeleton-line is-short"></span></span>
+            </div>
+        </div>`;
+}
+
+
 // =========================================================
 // LOAD NEARBY BUSINESSES
 // =========================================================
@@ -25,7 +47,7 @@ const profileNav = document.getElementById("profileNav");
 async function loadBusinessesAtCoordinates(lat, lng, label) {
 
     businessList.innerHTML =
-        `<p>Finding businesses near ${label}...</p>`;
+        showLoadingCards(`Finding businesses near ${label}...`);
 
     sectionTitle.textContent = label === "your location"
         ? "Nearby Businesses"
@@ -70,7 +92,7 @@ function loadNearbyBusinesses() {
     if (locationStatus) {
         locationStatus.textContent = "Getting your current location…";
     }
-    businessList.innerHTML = "<p>Finding places near your current location…</p>";
+    showLoadingCards("Finding places near your current location…");
 
     navigator.geolocation.getCurrentPosition(
         function(position) {
@@ -185,7 +207,7 @@ async function renderBusinesses() {
     if (filtered.length === 0) {
 
         businessList.innerHTML =
-            "<p>No businesses found.</p>";
+            `<div class="ra-empty-state"><strong>No businesses found</strong><span>Try another category or a different search.</span></div>`;
 
         return;
     }
@@ -300,7 +322,7 @@ async function loadFollowingBusinesses() {
         "Following Businesses";
 
     businessList.innerHTML =
-        "<p>Loading following businesses...</p>";
+        showLoadingCards("Loading businesses you follow…");
 
     try {
 
@@ -331,7 +353,7 @@ async function loadFollowingBusinesses() {
         if (filtered.length === 0) {
 
             businessList.innerHTML =
-                "<p>You are not following any businesses yet.</p>";
+                `<div class="ra-empty-state"><strong>You’re not following a business yet</strong><span>Explore nearby places and follow your favourites to see them here.</span></div>`;
 
             return;
         }
@@ -359,7 +381,7 @@ async function loadOffers() {
         "Latest Offers";
 
     businessList.innerHTML =
-        "<p>Loading offers...</p>";
+        showLoadingCards("Finding the latest offers…");
 
     let businesses = allBusinesses;
 
@@ -402,7 +424,7 @@ async function loadOffers() {
     if (filtered.length === 0) {
 
         businessList.innerHTML =
-            "<p>No offers available.</p>";
+            `<div class="ra-empty-state"><strong>No offers available right now</strong><span>Check back later for new offers from local businesses.</span></div>`;
 
         return;
     }
