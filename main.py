@@ -2341,3 +2341,112 @@ def owner_business_customers(
         ]
     finally:
         conn.close()
+
+
+# =========================================================
+# REWARD MANAGEMENT AND CUSTOMER REDEMPTION HISTORY
+# =========================================================
+
+@app.get("/api/owner/rewards")
+def owner_list_rewards(session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT r.id, r.business_id, b.name, r.title, r.description,
+                      r.points_cost, r.active, r.created_at
+               FROM rewards r JOIN businesses b ON b.id = r.business_id
+               WHERE b.owner_id = ? ORDER BY r.created_at DESC, r.id DESC""",
+            (owner[0],),
+        )
+        return [
+            {"id": row[0], "business_id": row[1], "business_name": row[2],
+             "title": row[3], "description": row[4], "points_cost": row[5],
+             "active": bool(row[6]), "created_at": row[7]}
+            for row in cursor.fetchall()
+        ]
+    finally:
+        conn.close()
+
+
+@app.post("/api/owner/rewards/{reward_id}/deactivate")
+def deactivate_reward(reward_id: int, session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE rewards SET active = FALSE WHERE id = ?
+               AND business_id IN (SELECT id FROM businesses WHERE owner_id = ?)""",
+            (reward_id, owner[0]),
+        )
+        if cursor.rowcount != 1:
+            conn.rollback()
+            raise HTTPException(status_code=404, detail="Reward not found for your business.")
+        conn.commit()
+        return {"success": True, "active": False}
+    finally:
+        conn.close()
+
+
+@app.post("/api/owner/rewards/{reward_id}/update")
+def update_reward(
+    reward_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    points_cost: int = Form(...),
+    session: str | None = Cookie(default=None),
+):
+    owner = require_owner(session)
+    title = title.strip()
+    description = description.strip()
+    if not title or len(title) > 100:
+        raise HTTPException(status_code=400, detail="Reward title must be 1–100 characters.")
+    if len(description) > 500:
+        raise HTTPException(status_code=400, detail="Reward description must be 500 characters or fewer.")
+    if points_cost < 1 or points_cost > 100000:
+        raise HTTPException(status_code=400, detail="Points cost must be between 1 and 100000.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE rewards SET title = ?, description = ?, points_cost = ?
+               WHERE id = ? AND business_id IN
+                   (SELECT id FROM businesses WHERE owner_id = ?)""",
+            (title, description, points_cost, reward_id, owner[0]),
+        )
+        if cursor.rowcount != 1:
+            conn.rollback()
+            raise HTTPException(status_code=404, detail="Reward not found for your business.")
+        conn.commit()
+        return {"success": True}
+    finally:
+        conn.close()
+
+
+@app.get("/api/loyalty/redemptions")
+def customer_redemption_history(session: str | None = Cookie(default=None)):
+    user = require_login(session)
+    if user[3] != "customer":
+        raise HTTPException(status_code=403, detail="Customer account required.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT rr.id, rr.business_id, b.name, rr.reward_id, r.title,
+                      rr.points_spent, rr.status, rr.created_at, rr.fulfilled_at
+               FROM reward_redemptions rr
+               JOIN businesses b ON b.id = rr.business_id
+               JOIN rewards r ON r.id = rr.reward_id
+               WHERE rr.user_id = ? ORDER BY rr.created_at DESC, rr.id DESC LIMIT 100""",
+            (user[0],),
+        )
+        return [
+            {"id": row[0], "business_id": row[1], "business_name": row[2],
+             "reward_id": row[3], "reward_title": row[4], "points_spent": row[5],
+             "status": row[6], "created_at": row[7], "fulfilled_at": row[8]}
+            for row in cursor.fetchall()
+        ]
+    finally:
+        conn.close()
