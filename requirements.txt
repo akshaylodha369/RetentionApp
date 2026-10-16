@@ -6,3 +6,4 @@ requests
 
 python-multipart
 psycopg[binary]>=3.2,<4
+qrcode>=7.4,<9
