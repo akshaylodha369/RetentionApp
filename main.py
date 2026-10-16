@@ -2272,3 +2272,72 @@ def owner_business_qr(business_id: int, session: str | None = Cookie(default=Non
     if business[7] != owner[0]:
         raise HTTPException(status_code=403, detail="You are not authorized to access this QR code.")
     return _business_qr_response(business_id)
+
+
+# =========================================================
+# PROFILE EDITING
+# =========================================================
+
+@app.post("/api/me/profile")
+def update_my_profile(
+    name: str = Form(...),
+    email: str = Form(...),
+    session: str | None = Cookie(default=None),
+):
+    user = require_login(session)
+    name = name.strip()
+    email = email.strip().lower()
+    if not name or len(name) > 100:
+        raise HTTPException(status_code=400, detail="Name must be 1–100 characters.")
+    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+        raise HTTPException(status_code=400, detail="Enter a valid email address.")
+    existing = get_user_by_email(email)
+    if existing and existing[0] != user[0]:
+        raise HTTPException(status_code=409, detail="That email is already used by another account.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET name = ?, email = ? WHERE id = ?", (name, email, user[0]))
+        conn.commit()
+        return {"success": True, "user": {"id": user[0], "name": name, "email": email, "role": user[3]}}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+# =========================================================
+# OWNER CUSTOMER LIST (FOLLOWERS OF OWNED BUSINESSES ONLY)
+# =========================================================
+
+@app.get("/api/owner/businesses/{business_id}/customers")
+def owner_business_customers(
+    business_id: int,
+    session: str | None = Cookie(default=None),
+):
+    owner = require_owner(session)
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    if business[7] != owner[0]:
+        raise HTTPException(status_code=403, detail="You are not authorized to view this business's customers.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT u.id, u.name, u.email,
+                      COALESCE((SELECT SUM(t.points_delta)
+                                FROM loyalty_transactions t
+                                WHERE t.user_id = u.id AND t.business_id = ?), 0) AS points
+               FROM follows f JOIN users u ON u.id = f.user_id
+               WHERE f.business_id = ? AND u.role = 'customer'
+               ORDER BY u.name COLLATE NOCASE""",
+            (business_id, business_id),
+        )
+        return [
+            {"id": row[0], "name": row[1], "email": row[2], "points": int(row[3] or 0)}
+            for row in cursor.fetchall()
+        ]
+    finally:
+        conn.close()
