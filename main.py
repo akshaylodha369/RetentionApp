@@ -11,6 +11,9 @@ import time
 from urllib.parse import urlsplit
 import requests
 import sqlite3
+import io
+import qrcode
+from qrcode.image.svg import SvgPathImage
 
 from database import (
     init_db,
@@ -2224,3 +2227,48 @@ def owner_claimable_businesses(session: str | None = Cookie(default=None)):
         for row in get_businesses()
         if row[7] is None
     ]
+
+
+# =========================================================
+# BUSINESS QR CODES
+# =========================================================
+
+def _business_qr_response(business_id: int):
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    base_url = os.environ.get("PUBLIC_BASE_URL", "https://retentionapp.onrender.com").rstrip("/")
+    public_url = base_url + "/static/business.html?id=" + str(business_id)
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,
+        border=4,
+    )
+    qr.add_data(public_url)
+    qr.make(fit=True)
+    image = qr.make_image(image_factory=SvgPathImage)
+    buffer = io.BytesIO()
+    image.save(buffer)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=3600", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@app.get("/api/businesses/{business_id}/qr.svg")
+def business_qr(business_id: int):
+    """QR for a public business page; encodes no customer information."""
+    return _business_qr_response(business_id)
+
+
+@app.get("/api/owner/businesses/{business_id}/qr.svg")
+def owner_business_qr(business_id: int, session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    if business[7] != owner[0]:
+        raise HTTPException(status_code=403, detail="You are not authorized to access this QR code.")
+    return _business_qr_response(business_id)
