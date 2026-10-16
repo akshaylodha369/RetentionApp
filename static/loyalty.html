@@ -43,6 +43,10 @@
     <div id="rewards" class="loyalty-grid"></div>
   </section>
   <section>
+    <h2>Redemption history</h2>
+    <div id="redemptionHistory" class="loyalty-grid"></div>
+  </section>
+  <section>
     <h2>Recent points activity</h2>
     <div id="activity" class="loyalty-grid"></div>
   </section>
@@ -53,19 +57,22 @@
   const balances=document.getElementById("balances");
   const rewardsRoot=document.getElementById("rewards");
   const activity=document.getElementById("activity");
+  const redemptionHistory=document.getElementById("redemptionHistory");
   const esc=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   try{
     const me=await fetch("/api/me",{credentials:"same-origin",cache:"no-store"});
     const meData=await me.json();
     if(!meData.logged_in){location.replace("/static/login.html?next=%2Fstatic%2Floyalty.html");return;}
     if(meData.user?.role!=="customer"){status.textContent="Please use a customer account to redeem rewards.";return;}
-    const [summaryResponse,followingResponse]=await Promise.all([
+    const [summaryResponse,followingResponse,redemptionsResponse]=await Promise.all([
       fetch("/api/loyalty/summary",{credentials:"same-origin",cache:"no-store"}),
-      fetch("/api/following",{credentials:"same-origin",cache:"no-store"})
+      fetch("/api/following",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/loyalty/redemptions",{credentials:"same-origin",cache:"no-store"})
     ]);
-    if(!summaryResponse.ok||!followingResponse.ok)throw new Error("Could not load rewards.");
+    if(!summaryResponse.ok||!followingResponse.ok||!redemptionsResponse.ok)throw new Error("Could not load rewards.");
     const summary=await summaryResponse.json();
     const following=await followingResponse.json();
+    const redemptionItems=await redemptionsResponse.json();
     const balanceMap=new Map(summary.balances.map(item=>[Number(item.business_id),Number(item.points)]));
     if(!summary.balances.length)balances.innerHTML='<div class="loyalty-card"><p class="loyalty-muted">You have not earned points yet. Follow a business and ask the owner about its loyalty programme.</p></div>';
     else balances.innerHTML=summary.balances.map(item=>{const business=following.find(b=>Number(b.id)===Number(item.business_id));return '<article class="loyalty-card"><h3>'+esc(business?.name||("Business #"+item.business_id))+'</h3><p class="loyalty-points">'+Number(item.points)+' points</p></article>';}).join("");
@@ -76,6 +83,7 @@
     }));
     const allRewards=rewardGroups.flat();
     rewardsRoot.innerHTML=allRewards.length?allRewards.map(reward=>'<article class="loyalty-card"><p class="loyalty-muted">'+esc(reward.business_name)+'</p><h3>'+esc(reward.title)+'</h3><p>'+esc(reward.description||"")+'</p><p><strong>'+Number(reward.points_cost)+' points</strong> · You have '+Number(reward.balance)+'</p><button class="loyalty-button" data-redeem="'+Number(reward.id)+'" '+(reward.balance<reward.points_cost?'disabled':'')+'>Redeem reward</button></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">No rewards available yet from the businesses you follow.</p></div>';
+    redemptionHistory.innerHTML=redemptionItems.length?redemptionItems.map(item=>'<article class="loyalty-card"><p class="loyalty-muted">'+esc(item.business_name)+'</p><h3>'+esc(item.reward_title)+'</h3><p>'+Number(item.points_spent)+' points · Status: <strong>'+esc(item.status)+'</strong></p><p class="loyalty-muted">'+new Date(Number(item.created_at)*1000).toLocaleString()+'</p></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">Your redeemed rewards will appear here.</p></div>';
     activity.innerHTML=summary.recent_transactions.length?summary.recent_transactions.map(item=>'<article class="loyalty-card"><h3>'+esc(item.business_name)+'</h3><p>'+esc(item.reason)+'</p><p class="loyalty-points">'+(Number(item.points_delta)>0?"+":"")+Number(item.points_delta)+' points</p><p class="loyalty-muted">'+new Date(Number(item.created_at)*1000).toLocaleString()+'</p></article>').join(""):'<div class="loyalty-card"><p class="loyalty-muted">Your points history will appear here.</p></div>';
     rewardsRoot.addEventListener("click",async event=>{
       const button=event.target.closest("[data-redeem]");
