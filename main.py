@@ -11,6 +11,7 @@ import time
 from urllib.parse import urlsplit
 import requests
 import sqlite3
+import database
 import io
 import qrcode
 from qrcode.image.svg import SvgPathImage
@@ -2017,7 +2018,13 @@ def redeem_reward(reward_id: int, session: str | None = Cookie(default=None)):
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("BEGIN IMMEDIATE")
+        if database.USE_POSTGRES:
+            # Serialize redemptions for the same customer to prevent concurrent overspending.
+            cursor.execute("BEGIN")
+            cursor.execute("SELECT id FROM users WHERE id = ? FOR UPDATE", (user[0],))
+            cursor.fetchone()
+        else:
+            cursor.execute("BEGIN IMMEDIATE")
         cursor.execute(
             """SELECT id, business_id, title, points_cost
                FROM rewards WHERE id = ? AND active = TRUE""",
