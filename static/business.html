@@ -32,6 +32,13 @@
             <button id="followButton" type="button">
                 ❤️ Follow
             </button>
+            <button id="shareBusinessButton" type="button">Share business / show QR</button>
+            <div id="businessQrPanel" hidden>
+                <p>Scan this QR to open the business page.</p>
+                <img id="businessQr" alt="QR code for this business" width="220" height="220">
+                <p><a id="businessShareLink" href="#">Open share link</a></p>
+                <p id="shareStatus" role="status" aria-live="polite"></p>
+            </div>
 
         </section>
 
@@ -80,7 +87,11 @@
 
         const rewardButton =
             document.getElementById("rewardButton");
-
+        const shareBusinessButton = document.getElementById("shareBusinessButton");
+        const businessQrPanel = document.getElementById("businessQrPanel");
+        const businessQr = document.getElementById("businessQr");
+        const businessShareLink = document.getElementById("businessShareLink");
+        const shareStatus = document.getElementById("shareStatus");
 
         let business = null;
         let following = false;
@@ -549,6 +560,30 @@
             }
         );
 
+
+        shareBusinessButton.addEventListener("click", async function() {
+            if (!businessId || !/^\\d+$/.test(businessId)) {
+                shareStatus.textContent = "Business link is unavailable.";
+                return;
+            }
+            const shareUrl = window.location.origin + "/static/business.html?id=" + encodeURIComponent(businessId);
+            businessQr.src = "/api/businesses/" + encodeURIComponent(businessId) + "/qr.svg";
+            businessShareLink.href = shareUrl;
+            businessQrPanel.hidden = false;
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: businessName.textContent || "Local business", url: shareUrl });
+                    shareStatus.textContent = "Share link opened.";
+                } else if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(shareUrl);
+                    shareStatus.textContent = "Business link copied. You can also scan the QR.";
+                } else {
+                    shareStatus.textContent = "Use the link shown below or scan the QR code.";
+                }
+            } catch (error) {
+                if (error.name !== "AbortError") shareStatus.textContent = "QR is ready. Copy the link below to share.";
+            }
+        });
 
         // =====================================================
         // START
