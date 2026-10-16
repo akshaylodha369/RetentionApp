@@ -376,3 +376,164 @@ button { overflow-wrap: anywhere; }
   .hero-art { height: 120px !important; }
   .auth-shell { min-height: 0 !important; }
 }
+
+
+/* RetentionApp UI consistency pass — shared across customer and owner screens. */
+:root {
+  --ra-ink: #1d3027;
+  --ra-muted: #68776d;
+  --ra-paper: #f7f8f4;
+  --ra-surface: #fffefa;
+  --ra-line: #e1e7dd;
+  --ra-green: #275b43;
+  --ra-green-dark: #1d4634;
+  --ra-green-soft: #eaf2e7;
+  --ra-radius: 20px;
+  --ra-shadow: 0 12px 34px rgba(25, 49, 33, .07);
+}
+html { color-scheme: light; }
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  color: var(--ra-ink);
+  line-height: 1.55;
+}
+h1, h2, h3, h4, .brand-text strong {
+  letter-spacing: -.035em;
+}
+p { line-height: 1.65; }
+a { text-underline-offset: 3px; }
+button, [role="button"], input[type="submit"] {
+  min-height: 42px;
+  border-radius: 12px;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+button:active, [role="button"]:active, input[type="submit"]:active { transform: translateY(1px); }
+button:disabled, input[type="submit"]:disabled { opacity: .58; cursor: not-allowed; transform: none; }
+input, select, textarea {
+  min-height: 44px;
+  border: 1px solid #cbd6cb;
+  border-radius: 11px;
+  background: #fff;
+  color: var(--ra-ink);
+  padding: 11px 13px;
+  font: inherit;
+}
+textarea { min-height: 104px; resize: vertical; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #6e9878;
+  box-shadow: 0 0 0 3px rgba(71, 122, 83, .14);
+}
+button:not(.filter-btn):not(.tab-button):not(.profile-card-button):not(.bottom-nav button):not(.logout-button),
+.loyalty-button, .notice-button, .owner-card button {
+  font-weight: 700;
+}
+.top-bar {
+  background: rgba(250, 251, 247, .94) !important;
+  border-bottom: 1px solid rgba(29, 48, 39, .09) !important;
+  box-shadow: 0 4px 18px rgba(25, 49, 33, .025);
+}
+.brand-mark, .closing-mark { border-radius: 13px; }
+.profile, .header-auth-link, .header-owner-link { border-radius: 12px; }
+main { padding-bottom: max(52px, env(safe-area-inset-bottom)); }
+.business-profile, .offer-card, .profile-page, .profile-card,
+.owner-card, .business-card-owner, .empty-state, .loyalty-card,
+.notice-card, .owner-loyalty .owner-card, .loyalty-wrap .loyalty-card {
+  border: 1px solid var(--ra-line);
+  border-radius: var(--ra-radius);
+  box-shadow: var(--ra-shadow);
+}
+.business-profile, .offer-card, .profile-page, .profile-card,
+.loyalty-card, .notice-card {
+  background: var(--ra-surface);
+}
+.business-profile { padding: clamp(20px, 4vw, 36px); }
+.business-profile h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.12; }
+.offer-card { padding: clamp(18px, 3vw, 26px); margin-top: 16px; }
+.business-card { border: 1px solid var(--ra-line); border-radius: 17px; background: var(--ra-surface); }
+.business-card:hover { border-color: #b9cbb8; box-shadow: 0 10px 26px rgba(25,49,33,.07); }
+.business-info h3 { line-height: 1.3; }
+.profile-card-button, .header-auth-link, .header-owner-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  min-height: 42px;
+}
+.profile-card-button {
+  padding: 10px 15px;
+  border: 1px solid #d5e2d2;
+  border-radius: 12px;
+  background: var(--ra-green-soft);
+  color: var(--ra-green-dark);
+  font-weight: 750;
+}
+.profile-card-button:hover { background: #dcebd8; }
+.auth-panel, .auth-story { border-radius: 24px; }
+.auth-field input, .auth-password input { min-height: 48px; }
+.auth-submit, .auth-primary-button { min-height: 48px; border-radius: 13px; }
+.loyalty-wrap, .owner-loyalty, .notice-wrap { width: min(100% - 32px, 1050px); padding: 12px; }
+.loyalty-hero, .owner-hero, .notice-hero {
+  background: linear-gradient(130deg, #1d4634, #2c6749) !important;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px !important;
+  box-shadow: 0 16px 34px rgba(29,70,52,.13);
+}
+.loyalty-card, .notice-card, .owner-loyalty .owner-card {
+  box-shadow: 0 5px 20px rgba(25,49,33,.035);
+}
+.loyalty-button, .notice-button, .owner-card button {
+  background: var(--ra-green) !important;
+  color: #fff !important;
+  border: 1px solid var(--ra-green) !important;
+  border-radius: 11px !important;
+  padding: 11px 16px !important;
+}
+.loyalty-button:hover, .notice-button:hover, .owner-card button:hover {
+  background: var(--ra-green-dark) !important;
+}
+.loyalty-status, .owner-status, .notice-status, [role="status"] { overflow-wrap: anywhere; }
+table { border-collapse: collapse; }
+th, td { padding: 11px 13px; border-bottom: 1px solid var(--ra-line); text-align: left; }
+:focus-visible { outline-color: rgba(39, 91, 67, .55); }
+@media (min-width: 768px) {
+  .loyalty-wrap, .owner-loyalty, .notice-wrap { padding: 20px; margin: 32px auto; }
+}
+/* The owner dashboard previously used an unrelated purple/black theme.
+   Bring it back into the same green-and-ivory product system. */
+.dashboard-header {
+  background: linear-gradient(130deg, #1d4634, #2c6749) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 16px 36px rgba(29,70,52,.13) !important;
+  padding: clamp(22px, 4vw, 36px) !important;
+}
+.dashboard-header h2 { color: #fff !important; }
+.dashboard-header p { color: rgba(255,255,255,.78) !important; }
+.dashboard-header:after { opacity: .45; }
+.owner-card, .business-card-owner, .empty-state {
+  color: var(--ra-ink) !important;
+  background: var(--ra-surface) !important;
+  border: 1px solid var(--ra-line) !important;
+  border-radius: 19px !important;
+  box-shadow: var(--ra-shadow) !important;
+  padding: clamp(18px, 3vw, 26px) !important;
+}
+.owner-card h3, .business-card-owner h2, .business-card-owner h3 {
+  color: var(--ra-ink) !important;
+}
+.owner-card p, .business-card-owner p, .message, .empty-state { color: var(--ra-muted) !important; }
+.offer-box { border-color: var(--ra-line) !important; }
+.offer-box textarea { background: #fff !important; color: var(--ra-ink) !important; border-color: #cbd6cb !important; }
+.update-button { background: var(--ra-green) !important; color: #fff !important; box-shadow: none !important; border-radius: 12px !important; }
+.update-button:hover { background: var(--ra-green-dark) !important; }
+.logout-button { background: #fff !important; color: #8a3333 !important; border: 1px solid #e8caca !important; border-radius: 12px !important; }
+@media (max-width: 767px) {
+  .loyalty-wrap, .owner-loyalty, .notice-wrap { width: calc(100% - 16px) !important; margin: 12px auto !important; padding: 4px !important; }
+  .loyalty-hero, .owner-hero, .notice-hero { padding: 18px !important; }
+  .loyalty-grid, .owner-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .dashboard-header, .owner-card, .business-card-owner { padding: 18px !important; }
+  .business-profile { padding: 18px !important; }
+  .business-profile button, .offer-card button { width: 100%; margin-top: 8px; }
+  .business-profile #businessQrPanel img { width: min(220px, 100%); height: auto; }
+}
