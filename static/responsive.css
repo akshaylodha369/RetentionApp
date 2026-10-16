@@ -537,3 +537,116 @@ th, td { padding: 11px 13px; border-bottom: 1px solid var(--ra-line); text-align
   .business-profile button, .offer-card button { width: 100%; margin-top: 8px; }
   .business-profile #businessQrPanel img { width: min(220px, 100%); height: auto; }
 }
+
+
+/* Smoothness and interaction polish — intentionally lightweight, CSS-only. */
+:root {
+  --ra-motion-fast: 150ms;
+  --ra-motion: 220ms;
+  --ra-ease: cubic-bezier(.2,.75,.25,1);
+}
+html { scroll-behavior: smooth; }
+body { text-rendering: optimizeLegibility; }
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: saturate(150%) blur(14px);
+  -webkit-backdrop-filter: saturate(150%) blur(14px);
+  transition: box-shadow var(--ra-motion) var(--ra-ease), background-color var(--ra-motion) var(--ra-ease);
+}
+.brand, .profile, .header-auth-link, .header-owner-link,
+.filter-btn, .tabs button, .bottom-nav button, .profile-card-button,
+.business-card, .offer-card, .owner-card, .business-card-owner,
+.loyalty-card, .notice-card, .closing-mark, .art-tile {
+  transition:
+    transform var(--ra-motion) var(--ra-ease),
+    box-shadow var(--ra-motion) var(--ra-ease),
+    border-color var(--ra-motion-fast) ease,
+    background-color var(--ra-motion-fast) ease,
+    color var(--ra-motion-fast) ease,
+    opacity var(--ra-motion-fast) ease;
+}
+.business-card, .offer-card, .owner-card, .business-card-owner,
+.loyalty-card, .notice-card, .profile-card {
+  will-change: auto;
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) and (pointer: fine) {
+  .business-card:hover, .offer-card:hover, .owner-card:hover,
+  .business-card-owner:hover, .loyalty-card:hover, .notice-card:hover,
+  .profile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(25,49,33,.075);
+  }
+  .filter-btn:hover, .tabs button:hover, .profile-card-button:hover,
+  .header-auth-link:hover, .header-owner-link:hover {
+    transform: translateY(-1px);
+  }
+}
+button, a, input, select, textarea { touch-action: manipulation; }
+button:active, .filter-btn:active, .tabs button:active,
+.profile-card-button:active, .header-auth-link:active,
+.header-owner-link:active {
+  transform: scale(.985);
+}
+button:disabled, a[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .6;
+}
+input, select, textarea {
+  transition: border-color var(--ra-motion-fast) ease, box-shadow var(--ra-motion-fast) ease, background-color var(--ra-motion-fast) ease;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: #6e9878;
+  box-shadow: 0 0 0 3px rgba(71,122,83,.14);
+}
+a:focus-visible, button:focus-visible {
+  outline: 3px solid rgba(71,122,83,.5);
+  outline-offset: 3px;
+}
+#businessList {
+  align-content: start;
+}
+#businessList > * {
+  animation: ra-enter 260ms var(--ra-ease) both;
+}
+#businessList > *:nth-child(2) { animation-delay: 25ms; }
+#businessList > *:nth-child(3) { animation-delay: 45ms; }
+#businessList > *:nth-child(4) { animation-delay: 65ms; }
+#businessList > *:nth-child(5) { animation-delay: 85ms; }
+@keyframes ra-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.loading-spinner, .spinner {
+  animation: ra-spin .8s linear infinite;
+}
+@keyframes ra-spin { to { transform: rotate(360deg); } }
+.status-dot {
+  animation: ra-pulse 2.2s ease-in-out infinite;
+}
+@keyframes ra-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media (max-width: 767px) {
+  .top-bar { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .business-card, .offer-card, .owner-card, .business-card-owner,
+  .loyalty-card, .notice-card, .profile-card { transform: none !important; }
+  #businessList > * { animation-duration: 180ms; }
+  button, .filter-btn, .tabs button, .profile-card-button { min-height: 42px; }
+}
