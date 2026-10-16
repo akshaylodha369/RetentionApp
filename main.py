@@ -1820,3 +1820,295 @@ def update_offer(
     return {
         "success": True
     }
+
+# =========================================================
+# LOYALTY REWARDS (MVP)
+# =========================================================
+
+@app.get("/api/businesses/{business_id}/rewards")
+def list_business_rewards(business_id: int):
+    """Public catalogue for active rewards offered by a business."""
+    if not get_business_by_id(business_id):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, business_id, title, description, points_cost
+               FROM rewards WHERE business_id = ? AND active = TRUE
+               ORDER BY points_cost ASC, id DESC""",
+            (business_id,),
+        )
+        rows = cursor.fetchall()
+        return [
+            {"id": row[0], "business_id": row[1], "title": row[2],
+             "description": row[3], "points_cost": row[4]}
+            for row in rows
+        ]
+    finally:
+        conn.close()
+
+
+@app.post("/api/owner/businesses/{business_id}/rewards")
+def create_business_reward(
+    business_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    points_cost: int = Form(...),
+    session: str | None = Cookie(default=None),
+):
+    owner = require_owner(session)
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    if business[7] != owner[0]:
+        raise HTTPException(status_code=403, detail="You are not authorized to manage this business.")
+    title = title.strip()
+    description = description.strip()
+    if not title or len(title) > 100:
+        raise HTTPException(status_code=400, detail="Reward title must be 1–100 characters.")
+    if len(description) > 500:
+        raise HTTPException(status_code=400, detail="Reward description must be 500 characters or fewer.")
+    if points_cost < 1 or points_cost > 100000:
+        raise HTTPException(status_code=400, detail="Points cost must be between 1 and 100000.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO rewards
+               (business_id, title, description, points_cost, active, created_at)
+               VALUES (?, ?, ?, ?, TRUE, ?)""",
+            (business_id, title, description, points_cost, int(time.time())),
+        )
+        reward_id = cursor.lastrowid
+        conn.commit()
+        return {"success": True, "reward_id": reward_id}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.get("/api/loyalty/summary")
+def loyalty_summary(session: str | None = Cookie(default=None)):
+    user = require_login(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT business_id, SUM(points_delta) AS points
+               FROM loyalty_transactions WHERE user_id = ?
+               GROUP BY business_id ORDER BY business_id""",
+            (user[0],),
+        )
+        balances = [
+            {"business_id": row[0], "points": int(row[1] or 0)}
+            for row in cursor.fetchall()
+        ]
+        cursor.execute(
+            """SELECT t.id, t.business_id, b.name, t.points_delta,
+                      t.reason, t.created_at
+               FROM loyalty_transactions t
+               JOIN businesses b ON b.id = t.business_id
+               WHERE t.user_id = ? ORDER BY t.created_at DESC, t.id DESC LIMIT 50""",
+            (user[0],),
+        )
+        recent = [
+            {"id": row[0], "business_id": row[1], "business_name": row[2],
+             "points_delta": row[3], "reason": row[4], "created_at": row[5]}
+            for row in cursor.fetchall()
+        ]
+        return {"balances": balances, "recent_transactions": recent}
+    finally:
+        conn.close()
+
+
+@app.post("/api/owner/businesses/{business_id}/points")
+def award_loyalty_points(
+    business_id: int,
+    customer_email: str = Form(...),
+    points: int = Form(...),
+    reason: str = Form(...),
+    session: str | None = Cookie(default=None),
+):
+    """Owner-issued points are auditable and restricted to customers following this business."""
+    owner = require_owner(session)
+    business = get_business_by_id(business_id)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    if business[7] != owner[0]:
+        raise HTTPException(status_code=403, detail="You are not authorized to manage this business.")
+    customer_email = customer_email.strip().lower()
+    reason = reason.strip()
+    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", customer_email) or len(customer_email) > 254:
+        raise HTTPException(status_code=400, detail="Enter a valid customer email.")
+    if points < 1 or points > 500:
+        raise HTTPException(status_code=400, detail="Points must be between 1 and 500 per award.")
+    if not reason or len(reason) > 200:
+        raise HTTPException(status_code=400, detail="Reason must be 1–200 characters.")
+    customer = get_user_by_email(customer_email)
+    if not customer or customer[4] != "customer":
+        raise HTTPException(status_code=404, detail="Following customer not found.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id FROM follows WHERE user_id = ? AND business_id = ?",
+            (customer[0], business_id),
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=409, detail="Customer must follow this business before receiving points.")
+        cursor.execute(
+            """INSERT INTO loyalty_transactions
+               (user_id, business_id, points_delta, reason, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (customer[0], business_id, points, reason, int(time.time())),
+        )
+        conn.commit()
+        return {"success": True, "customer_email": customer_email, "points_awarded": points}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.post("/api/rewards/{reward_id}/redeem")
+def redeem_reward(reward_id: int, session: str | None = Cookie(default=None)):
+    user = require_login(session)
+    if user[4] != "customer":
+        raise HTTPException(status_code=403, detail="Customer account required.")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute(
+            """SELECT id, business_id, title, points_cost
+               FROM rewards WHERE id = ? AND active = TRUE""",
+            (reward_id,),
+        )
+        reward = cursor.fetchone()
+        if not reward:
+            raise HTTPException(status_code=404, detail="Reward not found or inactive.")
+        cursor.execute(
+            """SELECT COALESCE(SUM(points_delta), 0)
+               FROM loyalty_transactions WHERE user_id = ? AND business_id = ?""",
+            (user[0], reward[1]),
+        )
+        balance = int(cursor.fetchone()[0] or 0)
+        if balance < reward[3]:
+            raise HTTPException(status_code=409, detail="Not enough points for this reward.")
+        now = int(time.time())
+        cursor.execute(
+            """INSERT INTO loyalty_transactions
+               (user_id, business_id, points_delta, reason, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user[0], reward[1], -reward[3], "Reward redeemed: " + reward[2], now),
+        )
+        cursor.execute(
+            """INSERT INTO reward_redemptions
+               (reward_id, user_id, business_id, points_spent, status, created_at)
+               VALUES (?, ?, ?, ?, 'pending', ?)""",
+            (reward_id, user[0], reward[1], reward[3], now),
+        )
+        redemption_id = cursor.lastrowid
+        conn.commit()
+        return {"success": True, "redemption_id": redemption_id, "status": "pending",
+                "points_spent": reward[3], "remaining_points": balance - reward[3]}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.get("/api/owner/analytics")
+def owner_analytics(session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, name FROM businesses WHERE owner_id = ? ORDER BY name",
+            (owner[0],),
+        )
+        businesses = cursor.fetchall()
+        summaries = []
+        for business_id, business_name in businesses:
+            cursor.execute("SELECT COUNT(*) FROM follows WHERE business_id = ?", (business_id,))
+            followers = int(cursor.fetchone()[0] or 0)
+            cursor.execute("SELECT COUNT(*) FROM rewards WHERE business_id = ? AND active = TRUE", (business_id,))
+            active_rewards = int(cursor.fetchone()[0] or 0)
+            cursor.execute(
+                "SELECT COUNT(*) FROM reward_redemptions WHERE business_id = ? AND status = 'pending'",
+                (business_id,),
+            )
+            pending_redemptions = int(cursor.fetchone()[0] or 0)
+            cursor.execute(
+                """SELECT COALESCE(SUM(CASE WHEN points_delta > 0 THEN points_delta ELSE 0 END), 0),
+                          COALESCE(SUM(CASE WHEN points_delta < 0 THEN -points_delta ELSE 0 END), 0)
+                   FROM loyalty_transactions WHERE business_id = ?""",
+                (business_id,),
+            )
+            issued, spent = cursor.fetchone()
+            summaries.append({
+                "business_id": business_id, "business_name": business_name,
+                "followers": followers, "active_rewards": active_rewards,
+                "pending_redemptions": pending_redemptions,
+                "points_issued": int(issued or 0), "points_spent": int(spent or 0),
+            })
+        return {"businesses": summaries}
+    finally:
+        conn.close()
+
+
+@app.get("/api/owner/redemptions")
+def owner_redemptions(session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT rr.id, rr.business_id, b.name, rr.reward_id, r.title,
+                      rr.user_id, u.name, rr.points_spent, rr.status, rr.created_at
+               FROM reward_redemptions rr
+               JOIN businesses b ON b.id = rr.business_id
+               JOIN rewards r ON r.id = rr.reward_id
+               JOIN users u ON u.id = rr.user_id
+               WHERE b.owner_id = ? ORDER BY rr.created_at DESC LIMIT 100""",
+            (owner[0],),
+        )
+        return [
+            {"id": row[0], "business_id": row[1], "business_name": row[2],
+             "reward_id": row[3], "reward_title": row[4], "customer_id": row[5],
+             "customer_name": row[6], "points_spent": row[7], "status": row[8],
+             "created_at": row[9]}
+            for row in cursor.fetchall()
+        ]
+    finally:
+        conn.close()
+
+
+@app.post("/api/owner/redemptions/{redemption_id}/fulfill")
+def fulfill_redemption(redemption_id: int, session: str | None = Cookie(default=None)):
+    owner = require_owner(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE reward_redemptions SET status = 'fulfilled', fulfilled_at = ?
+               WHERE id = ? AND status = 'pending'
+                 AND business_id IN (SELECT id FROM businesses WHERE owner_id = ?)""",
+            (int(time.time()), redemption_id, owner[0]),
+        )
+        if cursor.rowcount != 1:
+            conn.rollback()
+            raise HTTPException(status_code=404, detail="Pending redemption not found for your business.")
+        conn.commit()
+        return {"success": True, "status": "fulfilled"}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
