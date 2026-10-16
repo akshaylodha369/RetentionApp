@@ -2289,7 +2289,7 @@ def update_my_profile(
     email = email.strip().lower()
     if not name or len(name) > 100:
         raise HTTPException(status_code=400, detail="Name must be 1–100 characters.")
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email) or len(email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
         raise HTTPException(status_code=400, detail="Enter a valid email address.")
     existing = get_user_by_email(email)
     if existing and existing[0] != user[0]:
@@ -2332,7 +2332,7 @@ def owner_business_customers(
                                 WHERE t.user_id = u.id AND t.business_id = ?), 0) AS points
                FROM follows f JOIN users u ON u.id = f.user_id
                WHERE f.business_id = ? AND u.role = 'customer'
-               ORDER BY u.name COLLATE NOCASE""",
+               ORDER BY u.name""",
             (business_id, business_id),
         )
         return [
