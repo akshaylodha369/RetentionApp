@@ -38,6 +38,10 @@
     </form>
   </section>
   <section>
+    <h2>Manage rewards</h2>
+    <div id="ownerRewards" class="owner-grid"></div>
+  </section>
+  <section>
     <h2>Following customers</h2>
     <div class="owner-card"><label for="customerBusiness">Business</label><select id="customerBusiness"></select><p class="owner-muted">Only customers following your selected business appear here.</p></div>
     <div id="customers" class="owner-grid"></div>
@@ -48,7 +52,7 @@
 (async function(){
  const status=document.getElementById("ownerStatus");
  const businessSelects=[document.getElementById("rewardBusiness"),document.getElementById("pointsBusiness")];
- const analyticsRoot=document.getElementById("analytics"),redemptionsRoot=document.getElementById("redemptions"),customersRoot=document.getElementById("customers"),customerBusiness=document.getElementById("customerBusiness");
+ const analyticsRoot=document.getElementById("analytics"),redemptionsRoot=document.getElementById("redemptions"),customersRoot=document.getElementById("customers"),customerBusiness=document.getElementById("customerBusiness"),ownerRewardsRoot=document.getElementById("ownerRewards");
  const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
  const api=async(url,options={})=>{const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||"Request failed ("+response.status+")");return data;};
  try{
@@ -58,8 +62,10 @@
    const businesses=await api("/api/owner/businesses");
    if(!businesses.length){status.textContent="No business is assigned to this account yet. Submit a claim request from the owner dashboard.";businessSelects.forEach(s=>s.innerHTML='<option value="">No assigned businesses</option>');}
    else { businessSelects.forEach(select=>select.innerHTML=businesses.map(b=>'<option value="'+Number(b.id)+'">'+esc(b.name)+'</option>').join("")); customerBusiness.innerHTML=businesses.map(b=>'<option value="'+Number(b.id)+'">'+esc(b.name)+'</option>').join(""); }
-   const [analytics,redemptions]=await Promise.all([api("/api/owner/analytics"),api("/api/owner/redemptions")]);
+   const [analytics,redemptions,rewards]=await Promise.all([api("/api/owner/analytics"),api("/api/owner/redemptions"),api("/api/owner/rewards")]);
    analyticsRoot.innerHTML=analytics.businesses.length?analytics.businesses.map(b=>'<article class="owner-card"><h3>'+esc(b.business_name)+'</h3><img class="owner-qr" loading="lazy" alt="QR code for '+esc(b.business_name)+'" src="/api/owner/businesses/'+Number(b.business_id)+'/qr.svg"><a href="/api/owner/businesses/'+Number(b.business_id)+'/qr.svg" download="retentionapp-business-'+Number(b.business_id)+'.svg">Download business QR</a><p>Followers</p><p class="owner-metric">'+Number(b.followers)+'</p><p>Active rewards: <strong>'+Number(b.active_rewards)+'</strong></p><p>Pending redemptions: <strong>'+Number(b.pending_redemptions)+'</strong></p><p>Points issued: <strong>'+Number(b.points_issued)+'</strong> · spent: <strong>'+Number(b.points_spent)+'</strong></p></article>').join(""):'<article class="owner-card">No assigned businesses yet.</article>';
+   ownerRewardsRoot.innerHTML=rewards.length?rewards.map(r=>'<article class="owner-card"><p class="owner-muted">'+esc(r.business_name)+'</p><h3>'+esc(r.title)+'</h3><p>'+esc(r.description||"")+'</p><p>Cost: <strong>'+Number(r.points_cost)+' points</strong> · '+(r.active?"Active":"Inactive")+'</p>'+(r.active?'<button type="button" data-deactivate-reward="'+Number(r.id)+'">Deactivate reward</button>':'')+'</article>').join(""):'<article class="owner-card">No rewards yet. Create your first reward above.</article>';
+   ownerRewardsRoot.addEventListener("click",async event=>{const button=event.target.closest("[data-deactivate-reward]");if(!button)return;if(!confirm("Deactivate this reward? Customers will no longer be able to redeem it."))return;button.disabled=true;try{await api("/api/owner/rewards/"+encodeURIComponent(button.dataset.deactivateReward)+"/deactivate",{method:"POST"});status.textContent="Reward deactivated.";location.reload();}catch(error){status.textContent=error.message;button.disabled=false;}});
    redemptionsRoot.innerHTML=redemptions.length?redemptions.map(r=>'<article class="owner-card"><p class="owner-muted">'+esc(r.business_name)+'</p><h3>'+esc(r.reward_title)+'</h3><p>Customer: '+esc(r.customer_name)+' · '+Number(r.points_spent)+' points</p><p>Status: <strong>'+esc(r.status)+'</strong></p>'+(r.status==="pending"?'<button data-fulfill="'+Number(r.id)+'">Mark fulfilled</button>':'')+'</article>').join(""):'<article class="owner-card">No reward redemptions yet.</article>';
    redemptionsRoot.addEventListener("click",async event=>{const button=event.target.closest("[data-fulfill]");if(!button)return;button.disabled=true;try{await api("/api/owner/redemptions/"+encodeURIComponent(button.dataset.fulfill)+"/fulfill",{method:"POST"});status.textContent="Redemption marked fulfilled.";location.reload();}catch(error){status.textContent=error.message;button.disabled=false;}});
    document.getElementById("rewardForm").addEventListener("submit",async event=>{event.preventDefault();const form=event.currentTarget;const businessId=document.getElementById("rewardBusiness").value;const body=new URLSearchParams({title:document.getElementById("rewardTitle").value,description:document.getElementById("rewardDescription").value,points_cost:document.getElementById("rewardCost").value});try{await api("/api/owner/businesses/"+encodeURIComponent(businessId)+"/rewards",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});status.textContent="Reward created.";form.reset();location.reload();}catch(error){status.textContent=error.message;}});
