@@ -61,7 +61,7 @@ function loadNearbyBusinesses() {
 
     if (!navigator.geolocation) {
         if (locationStatus) {
-            locationStatus.textContent = "Location unavailable — choose Guna, MP or enable device location";
+            locationStatus.textContent = "Device location is unavailable in this browser";
         }
         businessList.innerHTML = "<p>Please enable location access in your browser to find nearby businesses.</p>";
         return;
@@ -91,7 +91,7 @@ function loadNearbyBusinesses() {
             }
 
             businessList.innerHTML =
-                "<p>Could not access your location. Allow Location permission for this site, then reload. You can also use the “Use Guna, MP” button.</p>";
+                "<p>Could not access your location. Allow Location permission for this site, then reload the page.</p>";
         },
         {
             enableHighAccuracy: true,
