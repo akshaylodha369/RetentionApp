@@ -2094,11 +2094,27 @@ def owner_analytics(session: str | None = Cookie(default=None)):
                 (business_id,),
             )
             issued, spent = cursor.fetchone()
+            cursor.execute(
+                "SELECT COUNT(DISTINCT user_id) FROM loyalty_transactions WHERE business_id = ? AND points_delta > 0",
+                (business_id,),
+            )
+            customers_rewarded = int(cursor.fetchone()[0] or 0)
+            cursor.execute(
+                """SELECT COUNT(*) FROM (
+                       SELECT user_id FROM loyalty_transactions
+                       WHERE business_id = ? AND points_delta > 0
+                       GROUP BY user_id HAVING COUNT(*) >= 2
+                   ) repeat_customers""",
+                (business_id,),
+            )
+            repeat_customers = int(cursor.fetchone()[0] or 0)
             summaries.append({
                 "business_id": business_id, "business_name": business_name,
                 "followers": followers, "active_rewards": active_rewards,
                 "pending_redemptions": pending_redemptions,
                 "points_issued": int(issued or 0), "points_spent": int(spent or 0),
+                "customers_rewarded": customers_rewarded,
+                "repeat_customers": repeat_customers,
             })
         return {"businesses": summaries}
     finally:
