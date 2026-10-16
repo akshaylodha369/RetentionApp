@@ -834,3 +834,26 @@ input, select, textarea { scroll-margin-top: 88px; }
     scroll-behavior: auto !important;
   }
 }
+
+/* Keep reveals subtle: no blur filters, long stagger chains, or permanent GPU hints. */
+body.ra-motion-ready .ra-reveal {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  filter: none !important;
+  transition: opacity 240ms var(--ra-ease), transform 240ms var(--ra-ease) !important;
+}
+body.ra-motion-ready .ra-reveal.ra-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  filter: none !important;
+}
+.ra-reveal.ra-stagger-1, .ra-reveal.ra-stagger-2, .ra-reveal.ra-stagger-3,
+.ra-reveal.ra-stagger-4, .ra-reveal.ra-stagger-5 { transition-delay: 0ms !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.ra-motion-ready .ra-reveal,
+  body.ra-motion-ready .ra-reveal.ra-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
