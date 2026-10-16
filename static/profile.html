@@ -7,6 +7,7 @@
     <title>Your Profile — RetentionApp</title>
     <link rel="stylesheet" href="/static/style.css?v=mobile-fit-20261015">
     <link rel="stylesheet" href="/static/responsive.css?v=mobile-fit-20261015-2">
+<style>.profile-edit-form input{display:block;width:100%;box-sizing:border-box;margin:7px 0 14px;padding:12px;border:1px solid #cbd5ce;border-radius:10px;font:inherit}.profile-edit-form label{font-weight:650}.profile-edit-form[hidden]{display:none}</style>
 </head>
 <body class="profile-page-body">
 <header class="top-bar">
@@ -25,6 +26,15 @@
         <p id="userEmail">Please wait while we check your session.</p>
 
         <p id="profileMessage" class="auth-message" role="status" aria-live="polite"></p>
+
+        <form class="profile-card profile-edit-form" id="profileEditForm" hidden>
+            <h3>Edit your profile</h3>
+            <label for="profileNameInput">Name</label>
+            <input id="profileNameInput" name="name" maxlength="100" required>
+            <label for="profileEmailInput">Email</label>
+            <input id="profileEmailInput" name="email" type="email" maxlength="254" required>
+            <button class="profile-card-button" type="submit" id="saveProfileButton">Save changes</button>
+        </form>
 
         <div class="profile-card">
             <div class="profile-card-icon" aria-hidden="true">❤️</div>
@@ -133,6 +143,9 @@
 
         name.textContent = user.name || "Your profile";
         email.textContent = user.email || "";
+        document.getElementById("profileEditForm").hidden = false;
+        document.getElementById("profileNameInput").value = user.name || "";
+        document.getElementById("profileEmailInput").value = user.email || "";
     } catch (error) {
         console.error("Profile load error:", error);
         name.textContent = "Unable to load profile";
@@ -140,6 +153,37 @@
         message.textContent = "Could not load your account right now. Refresh the page and try again.";
     }
 })();
+
+
+document.getElementById("profileEditForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    const button = document.getElementById("saveProfileButton");
+    const message = document.getElementById("profileMessage");
+    button.disabled = true;
+    button.textContent = "Saving…";
+    try {
+        const body = new URLSearchParams({
+            name: document.getElementById("profileNameInput").value,
+            email: document.getElementById("profileEmailInput").value
+        });
+        const response = await fetch("/api/me/profile", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Could not update profile.");
+        document.getElementById("userName").textContent = data.user.name;
+        document.getElementById("userEmail").textContent = data.user.email;
+        message.textContent = "Profile updated successfully.";
+    } catch (error) {
+        message.textContent = error.message || "Could not update profile.";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Save changes";
+    }
+});
 
 document.getElementById("logoutButton").addEventListener("click", async function () {
     const button = this;
