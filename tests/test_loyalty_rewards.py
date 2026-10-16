@@ -113,6 +113,19 @@ def test_owner_can_award_points_only_to_a_following_customer(loyalty_client):
     assert response.status_code == 200
     assert response.json()["points_awarded"] == 100
 
+    second_award = client.post(
+        f"/api/owner/businesses/{loyalty_client['business_id']}/points",
+        data={
+            "customer_email": "customer@example.com",
+            "points": 10,
+            "reason": "Purchase receipt 1001B",
+        },
+    )
+    assert second_award.status_code == 200
+    analytics = client.get("/api/owner/analytics").json()["businesses"][0]
+    assert analytics["customers_rewarded"] == 1
+    assert analytics["repeat_customers"] == 1
+
     response = client.post(
         f"/api/owner/businesses/{loyalty_client['other_business_id']}/points",
         data={
