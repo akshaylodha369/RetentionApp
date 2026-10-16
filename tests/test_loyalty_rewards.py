@@ -183,3 +183,51 @@ def test_loyalty_summary_is_private_and_scoped_to_logged_in_customer(loyalty_cli
     summary = client.get("/api/loyalty/summary")
     assert summary.status_code == 200
     assert summary.json()["balances"] == []
+
+
+def test_owner_can_update_and_deactivate_only_own_reward(loyalty_client):
+    client = loyalty_client["client"]
+    use_session(client, loyalty_client["tokens"]["owner"])
+    created = client.post(
+        f"/api/owner/businesses/{loyalty_client['business_id']}/rewards",
+        data={"title": "Starter", "description": "Initial", "points_cost": 25},
+    )
+    assert created.status_code == 200
+    reward_id = created.json()["reward_id"]
+
+    updated = client.post(
+        f"/api/owner/rewards/{reward_id}/update",
+        data={"title": "Updated reward", "description": "Updated details", "points_cost": 40},
+    )
+    assert updated.status_code == 200
+    assert client.get(f"/api/businesses/{loyalty_client['business_id']}/rewards").json()[0]["title"] == "Updated reward"
+
+    use_session(client, loyalty_client["tokens"]["other_owner"])
+    assert client.post(f"/api/owner/rewards/{reward_id}/deactivate").status_code == 404
+
+    use_session(client, loyalty_client["tokens"]["owner"])
+    assert client.post(f"/api/owner/rewards/{reward_id}/deactivate").status_code == 200
+    assert client.get(f"/api/businesses/{loyalty_client['business_id']}/rewards").json() == []
+
+
+def test_customer_can_view_only_their_own_redemption_history(loyalty_client):
+    client = loyalty_client["client"]
+    use_session(client, loyalty_client["tokens"]["owner"])
+    created = client.post(
+        f"/api/owner/businesses/{loyalty_client['business_id']}/rewards",
+        data={"title": "Small reward", "points_cost": 20},
+    )
+    assert created.status_code == 200
+    awarded = client.post(
+        f"/api/owner/businesses/{loyalty_client['business_id']}/points",
+        data={"customer_email": "customer@example.com", "points": 40, "reason": "Receipt #77"},
+    )
+    assert awarded.status_code == 200
+
+    use_session(client, loyalty_client["tokens"]["customer"])
+    redeemed = client.post(f"/api/rewards/{created.json()['reward_id']}/redeem")
+    assert redeemed.status_code == 200
+    history = client.get("/api/loyalty/redemptions")
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+    assert history.json()[0]["status"] == "pending"
