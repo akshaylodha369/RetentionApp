@@ -150,6 +150,37 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS idx_follows_business_id ON follows(business_id)",
             "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
             "CREATE INDEX IF NOT EXISTS idx_claim_requests_status ON business_claim_requests(status, created_at)",
+            """CREATE TABLE IF NOT EXISTS rewards (
+                id BIGSERIAL PRIMARY KEY,
+                business_id BIGINT NOT NULL REFERENCES businesses(id),
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                points_cost INTEGER NOT NULL CHECK(points_cost > 0),
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at BIGINT NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS loyalty_transactions (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES users(id),
+                business_id BIGINT NOT NULL REFERENCES businesses(id),
+                points_delta INTEGER NOT NULL CHECK(points_delta <> 0),
+                reason TEXT NOT NULL,
+                created_at BIGINT NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS reward_redemptions (
+                id BIGSERIAL PRIMARY KEY,
+                reward_id BIGINT NOT NULL REFERENCES rewards(id),
+                user_id BIGINT NOT NULL REFERENCES users(id),
+                business_id BIGINT NOT NULL REFERENCES businesses(id),
+                points_spent INTEGER NOT NULL CHECK(points_spent > 0),
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending', 'fulfilled', 'cancelled')),
+                created_at BIGINT NOT NULL,
+                fulfilled_at BIGINT
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_rewards_business_active ON rewards(business_id, active)",
+            "CREATE INDEX IF NOT EXISTS idx_loyalty_user_business ON loyalty_transactions(user_id, business_id)",
+            "CREATE INDEX IF NOT EXISTS idx_redemptions_business_status ON reward_redemptions(business_id, status, created_at)",
         ]
         try:
             for statement in statements:
@@ -264,6 +295,51 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_claim_requests_status
         ON business_claim_requests(status, created_at)
     """)
+
+    # Loyalty rewards and an auditable points ledger.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rewards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            points_cost INTEGER NOT NULL CHECK(points_cost > 0),
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY(business_id) REFERENCES businesses(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS loyalty_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            business_id INTEGER NOT NULL,
+            points_delta INTEGER NOT NULL CHECK(points_delta <> 0),
+            reason TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(business_id) REFERENCES businesses(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reward_redemptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reward_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            business_id INTEGER NOT NULL,
+            points_spent INTEGER NOT NULL CHECK(points_spent > 0),
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK(status IN ('pending', 'fulfilled', 'cancelled')),
+            created_at INTEGER NOT NULL,
+            fulfilled_at INTEGER,
+            FOREIGN KEY(reward_id) REFERENCES rewards(id),
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(business_id) REFERENCES businesses(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rewards_business_active ON rewards(business_id, active)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_loyalty_user_business ON loyalty_transactions(user_id, business_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_redemptions_business_status ON reward_redemptions(business_id, status, created_at)")
 
     conn.commit()
     conn.close()
