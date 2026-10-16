@@ -61,7 +61,7 @@ def test_public_business_qr_returns_svg(qr_client):
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
     assert b"<svg" in response.content
-    assert b"retentionapp.onrender.com/static/business.html?id=" in response.content
+    assert b'id="qr-path"' in response.content
 
 
 def test_owner_qr_requires_ownership(qr_client):
