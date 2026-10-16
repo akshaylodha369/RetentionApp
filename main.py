@@ -1976,7 +1976,7 @@ def award_loyalty_points(
         raise HTTPException(status_code=403, detail="You are not authorized to manage this business.")
     customer_email = customer_email.strip().lower()
     reason = reason.strip()
-    if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", customer_email) or len(customer_email) > 254:
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", customer_email) or len(customer_email) > 254:
         raise HTTPException(status_code=400, detail="Enter a valid customer email.")
     if points < 1 or points > 500:
         raise HTTPException(status_code=400, detail="Points must be between 1 and 500 per award.")
@@ -2012,7 +2012,7 @@ def award_loyalty_points(
 @app.post("/api/rewards/{reward_id}/redeem")
 def redeem_reward(reward_id: int, session: str | None = Cookie(default=None)):
     user = require_login(session)
-    if user[4] != "customer":
+    if user[3] != "customer":
         raise HTTPException(status_code=403, detail="Customer account required.")
     conn = get_connection()
     try:
