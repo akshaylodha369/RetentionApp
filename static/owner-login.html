@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1d4634"><title>Business owner login — RetentionApp</title>
 <link rel="stylesheet" href="/static/auth.css?v=motion-polish-20261016">
-    <link rel="stylesheet" href="/static/responsive.css?v=motion-polish-20261016">
+    <link rel="stylesheet" href="/static/responsive.css?v=ui-smooth-20261016">
 </head>
 <body>
 <main class="auth-shell">
@@ -45,5 +45,5 @@ const form=document.getElementById("authForm"),message=document.getElementById("
 document.querySelector("[data-toggle-password]").addEventListener("click",function(){const input=document.getElementById("password");const show=input.type==="password";input.type=show?"text":"password";this.textContent=show?"HIDE":"SHOW";});
 form.addEventListener("submit",async function(event){event.preventDefault();message.textContent="";message.className="auth-message";submit.disabled=true;submit.textContent="Logging in…";try{const response=await fetch("/api/owner/login",{method:"POST",body:new FormData(form),credentials:"include",cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(typeof data.detail==="string"?data.detail:"Could not log in. Please check your details.");if(data.user&&data.user.role!=="owner")throw new Error("Please use the customer login for this account.");const sessionResponse=await fetch("/api/me",{method:"GET",credentials:"include",cache:"no-store",headers:{"Accept":"application/json"}});const sessionData=await sessionResponse.json().catch(()=>({}));if(!sessionResponse.ok||sessionData.logged_in!==true||!sessionData.user||sessionData.user.role!=="owner")throw new Error("Login succeeded, but your owner session was not saved by the browser. Please allow cookies for retentionapp.onrender.com and try again.");location.replace("/static/owner-dashboard.html");}catch(error){message.textContent=error.message||"Unable to connect. Please try again.";message.className="auth-message error";}finally{submit.disabled=false;submit.textContent="Log in as owner";}});
 </script>
-<script src="/static/motion.js" defer></script>
+<script src="/static/motion.js?v=smooth-20261016" defer></script>
 </body></html>

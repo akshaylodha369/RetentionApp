@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1d4634"><title>Create customer account — RetentionApp</title>
 <link rel="stylesheet" href="/static/auth.css?v=motion-polish-20261016">
-    <link rel="stylesheet" href="/static/responsive.css?v=motion-polish-20261016">
+    <link rel="stylesheet" href="/static/responsive.css?v=ui-smooth-20261016">
 </head>
 <body>
 <main class="auth-shell">
@@ -46,5 +46,5 @@ const form=document.getElementById("authForm"),message=document.getElementById("
 document.querySelector("[data-toggle-password]").addEventListener("click",function(){const input=document.getElementById("password");const show=input.type==="password";input.type=show?"text":"password";this.textContent=show?"HIDE":"SHOW";});
 form.addEventListener("submit",async function(event){event.preventDefault();message.textContent="";message.className="auth-message";submit.disabled=true;submit.textContent="Creating account…";try{const response=await fetch("/api/signup",{method:"POST",body:new FormData(form),credentials:"same-origin"});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(typeof data.detail==="string"?data.detail:"Could not create your account. Please try again.");location.href="/static/login.html?registered=1";}catch(error){message.textContent=error.message||"Unable to connect. Please try again.";message.className="auth-message error";}finally{submit.disabled=false;submit.textContent="Create customer account";}});
 </script>
-<script src="/static/motion.js" defer></script>
+<script src="/static/motion.js?v=smooth-20261016" defer></script>
 </body></html>
