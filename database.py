@@ -181,6 +181,16 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS idx_rewards_business_active ON rewards(business_id, active)",
             "CREATE INDEX IF NOT EXISTS idx_loyalty_user_business ON loyalty_transactions(user_id, business_id)",
             "CREATE INDEX IF NOT EXISTS idx_redemptions_business_status ON reward_redemptions(business_id, status, created_at)",
+            """CREATE TABLE IF NOT EXISTS notifications (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES users(id),
+                title TEXT NOT NULL,
+                message TEXT NOT NULL,
+                link TEXT NOT NULL DEFAULT '/',
+                created_at BIGINT NOT NULL,
+                read_at BIGINT
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at)",
         ]
         try:
             for statement in statements:
@@ -340,6 +350,19 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_rewards_business_active ON rewards(business_id, active)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_loyalty_user_business ON loyalty_transactions(user_id, business_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_redemptions_business_status ON reward_redemptions(business_id, status, created_at)")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            link TEXT NOT NULL DEFAULT '/',
+            created_at INTEGER NOT NULL,
+            read_at INTEGER,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at)")
 
     conn.commit()
     conn.close()
