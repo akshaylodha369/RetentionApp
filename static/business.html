@@ -569,7 +569,7 @@
 
 
         shareBusinessButton.addEventListener("click", async function() {
-            if (!businessId || !/^\\d+$/.test(businessId)) {
+            if (!businessId || !/^\d+$/.test(businessId)) {
                 shareStatus.textContent = "Business link is unavailable.";
                 return;
             }
@@ -594,7 +594,7 @@
 
         async function loadBusinessRewards() {
             const root = document.getElementById("businessRewards");
-            if (!businessId || !/^\\d+$/.test(businessId)) {
+            if (!businessId || !/^\d+$/.test(businessId)) {
                 root.textContent = "Business not found.";
                 return;
             }
