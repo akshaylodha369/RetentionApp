@@ -55,6 +55,13 @@
 
         </section>
 
+        <section class="offer-card">
+            <h2>🎁 Loyalty rewards</h2>
+            <p>See what you can redeem with points at this business.</p>
+            <div id="businessRewards">Loading available rewards…</div>
+            <p><a href="/static/loyalty.html">View your points and redemption history</a></p>
+        </section>
+
     </main>
 
 
@@ -585,11 +592,43 @@
             }
         });
 
+        async function loadBusinessRewards() {
+            const root = document.getElementById("businessRewards");
+            if (!businessId || !/^\\d+$/.test(businessId)) {
+                root.textContent = "Business not found.";
+                return;
+            }
+            try {
+                const response = await fetch("/api/businesses/" + encodeURIComponent(businessId) + "/rewards", { cache: "no-store" });
+                if (!response.ok) throw new Error("Could not load rewards.");
+                const rewards = await response.json();
+                root.textContent = "";
+                if (!rewards.length) {
+                    root.textContent = "No loyalty rewards have been published yet.";
+                    return;
+                }
+                rewards.forEach(function(reward) {
+                    const card = document.createElement("article");
+                    const title = document.createElement("h3");
+                    const description = document.createElement("p");
+                    const cost = document.createElement("p");
+                    title.textContent = reward.title || "Reward";
+                    description.textContent = reward.description || "";
+                    cost.textContent = Number(reward.points_cost) + " points";
+                    card.append(title, description, cost);
+                    root.appendChild(card);
+                });
+            } catch (error) {
+                root.textContent = "Rewards are temporarily unavailable. Please try again.";
+            }
+        }
+
         // =====================================================
         // START
         // =====================================================
 
         loadBusiness();
+        loadBusinessRewards();
 
     </script>
 
