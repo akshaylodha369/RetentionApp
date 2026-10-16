@@ -1817,6 +1817,38 @@ def update_offer(
             detail="You are not authorized to edit this business."
         )
 
+    # Notify only this business's followers when an actual new offer is published.
+    if offer and offer != (row[6] or ""):
+        notification_conn = get_connection()
+        try:
+            notification_cursor = notification_conn.cursor()
+            notification_cursor.execute(
+                "SELECT user_id FROM follows WHERE business_id = ?",
+                (business_id,),
+            )
+            follower_ids = [item[0] for item in notification_cursor.fetchall()]
+            now = int(time.time())
+            for follower_id in follower_ids:
+                notification_cursor.execute(
+                    """INSERT INTO notifications
+                       (user_id, title, message, link, created_at)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (
+                        follower_id,
+                        "New offer from " + str(row[1]),
+                        "A business you follow has published a new offer.",
+                        "/static/business.html?id=" + str(business_id),
+                        now,
+                    ),
+                )
+            notification_conn.commit()
+        except Exception:
+            notification_conn.rollback()
+            # Offer saving should not fail just because notifications are temporarily unavailable.
+            print("NOTIFICATION INSERT FAILED | offer update completed")
+        finally:
+            notification_conn.close()
+
     return {
         "success": True
     }
@@ -2112,3 +2144,83 @@ def fulfill_redemption(redemption_id: int, session: str | None = Cookie(default=
         raise
     finally:
         conn.close()
+
+
+# =========================================================
+# IN-APP NOTIFICATIONS
+# =========================================================
+
+@app.get("/api/notifications")
+def list_notifications(session: str | None = Cookie(default=None)):
+    user = require_login(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, title, message, link, created_at, read_at
+               FROM notifications WHERE user_id = ?
+               ORDER BY created_at DESC, id DESC LIMIT 100""",
+            (user[0],),
+        )
+        return [
+            {"id": row[0], "title": row[1], "message": row[2], "link": row[3],
+             "created_at": row[4], "read": row[5] is not None}
+            for row in cursor.fetchall()
+        ]
+    finally:
+        conn.close()
+
+
+@app.post("/api/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    session: str | None = Cookie(default=None),
+):
+    user = require_login(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ? AND read_at IS NULL",
+            (int(time.time()), notification_id, user[0]),
+        )
+        changed = cursor.rowcount
+        conn.commit()
+        if changed == 0:
+            cursor.execute(
+                "SELECT id FROM notifications WHERE id = ? AND user_id = ?",
+                (notification_id, user[0]),
+            )
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Notification not found.")
+        return {"success": True, "read": True}
+    finally:
+        conn.close()
+
+
+@app.post("/api/notifications/read-all")
+def mark_all_notifications_read(session: str | None = Cookie(default=None)):
+    user = require_login(session)
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL",
+            (int(time.time()), user[0]),
+        )
+        changed = cursor.rowcount
+        conn.commit()
+        return {"success": True, "updated": changed}
+    finally:
+        conn.close()
+
+
+@app.get("/api/owner/claimable-businesses")
+def owner_claimable_businesses(session: str | None = Cookie(default=None)):
+    """Return only unassigned businesses; never rely on hidden owner_id fields in public APIs."""
+    require_owner(session)
+    return [
+        {"id": row[0], "name": row[1], "category": row[2], "address": row[5]}
+        for row in get_businesses()
+        if row[7] is None
+    ]
